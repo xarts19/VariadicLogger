@@ -1,8 +1,7 @@
-#include "Logger.h"
-
-#include "StringUtil.h"
+#include "VTLogger/Logger.h"
 
 #include <thread>
+#include <mutex>
 #include <stdexcept>
 #include <iostream>
 #include <iomanip>
@@ -23,6 +22,27 @@
     #pragma warning(push)
     #pragma warning(disable: 4996)
 #endif
+
+
+namespace Ut
+{
+    class LogManager
+    {
+    private:
+        friend Ut::Logger get_logger(const std::string& name);
+        friend void set_logger(const std::string& name, const Logger& logger);
+
+        LogManager();
+        ~LogManager();
+
+        std::map<std::string, Ut::Logger> loggers_;
+
+        static LogManager self_;
+        static bool self_valid_;
+
+        std::mutex lock_;
+    };
+}
 
 
 Ut::LogManager Ut::LogManager::self_;
@@ -101,14 +121,35 @@ struct Ut::Logger::Impl
     Impl(const std::string& name) :
         name        (name),
         stream      (nullptr),
+        stream_lock (),
         cout_level  (LL_NoLogging),
         cerr_level  (LL_NoLogging),
         stream_level(LL_NoLogging),
         options     (LO_Default)
     { }
 
+    Impl(const Impl& other) :
+        name        (other.name),
+        stream      (nullptr),
+        stream_lock (),
+        cout_level  (other.cout_level),
+        cerr_level  (other.cerr_level),
+        stream_level(other.stream_level),
+        options     (other.options)
+    {
+        std::lock_guard<std::mutex> l(stream_lock);
+        stream = other.stream;
+    }
+
+    ~Impl()
+    {
+        std::lock_guard<std::mutex> l(stream_lock);
+        stream = nullptr;
+    }
+
     std::string                    name;
     std::shared_ptr<std::FILE>     stream;
+    std::mutex                     stream_lock;
     LogLevel                       cout_level;
     LogLevel                       cerr_level;
     LogLevel                       stream_level;
@@ -160,13 +201,15 @@ bool Ut::Logger::set_stream(std::FILE* stream, LogLevel reporting_level)
 
     if (stream)
     {
-        pimpl_->stream = std::shared_ptr<std::FILE>(stream, std::fclose);
         pimpl_->stream_level = reporting_level;
+        std::lock_guard<std::mutex> lock(pimpl_->stream_lock);
+        pimpl_->stream = std::shared_ptr<std::FILE>(stream, std::fclose);
     }
     else
     {
-        pimpl_->stream = nullptr;
         pimpl_->stream_level = LL_NoLogging;
+        std::lock_guard<std::mutex> lock(pimpl_->stream_lock);
+        pimpl_->stream = nullptr;
     }
 
     return true;
@@ -267,39 +310,41 @@ void Ut::quote(detail_::LogWorker& log_worker)
 }
 
 
-Ut::Logger& Ut::get_logger(const std::string& name, const std::string& copy_from)
+Ut::Logger Ut::get_logger(const std::string& name)
 {
     if (!LogManager::self_valid_)
     {
         throw std::runtime_error("Trying to get logger after LogManager destruction");
     }
 
+    std::lock_guard<std::mutex> lock(LogManager::self_.lock_);
+
     auto it = LogManager::self_.loggers_.find(name);
     if (it != LogManager::self_.loggers_.end())
         return it->second;
 
-    if (!copy_from.empty())
+    auto pair = LogManager::self_.loggers_.insert(std::make_pair(name, Logger::cout(name)));
+    return pair.first->second;
+}
+
+
+void Ut::set_logger(const std::string& name, const Logger& logger)
+{
+    if (!LogManager::self_valid_)
     {
-        auto it = LogManager::self_.loggers_.find(copy_from);
-        if (it != LogManager::self_.loggers_.end())
-        {
-            auto pair = LogManager::self_.loggers_.insert(std::make_pair(name, it->second));
-            Ut::Logger& logger = pair.first->second;
-            logger.pimpl_->name = name;
-            return pair.first->second;
-        }
-        else
-        {
-            auto pair = LogManager::self_.loggers_.insert(std::make_pair(name, Logger::cout(name)));
-            Ut::Logger& logger = pair.first->second;
-            logger.warning() << "No logger with name" << copy_from << "to copy config from";
-            return logger;
-        }
+        throw std::runtime_error("Trying to get logger after LogManager destruction");
+    }
+
+    std::lock_guard<std::mutex> lock(LogManager::self_.lock_);
+
+    auto it = LogManager::self_.loggers_.find(name);
+    if (it != LogManager::self_.loggers_.end())
+    {
+        it->second = logger;
     }
     else
     {
-        auto pair = LogManager::self_.loggers_.insert(std::make_pair(name, Logger::cout(name)));
-        return pair.first->second;
+        LogManager::self_.loggers_.insert(std::make_pair(name, logger));
     }
 }
 
@@ -316,7 +361,6 @@ Ut::LogManager::~LogManager()
 }
 
 
-
 Ut::detail_::LogWorker::LogWorker(Logger* logger, LogLevel level)
     : logger_(logger)
     , msg_level_(level)
@@ -328,6 +372,7 @@ Ut::detail_::LogWorker::LogWorker(Logger* logger, LogLevel level)
     msg_stream_ << out;
 }
 
+
 Ut::detail_::LogWorker::~LogWorker()
 {
     assert(logger_);
@@ -335,6 +380,7 @@ Ut::detail_::LogWorker::~LogWorker()
     logger_->add_epilog(out, msg_level_);
     logger_->write_to_streams(msg_level_, out);
 }
+
 
 Ut::detail_::LogWorker::LogWorker(LogWorker&& other)
     : logger_(other.logger_)
@@ -348,6 +394,7 @@ Ut::detail_::LogWorker::LogWorker(LogWorker&& other)
     msg_stream_ << other.msg_stream_.rdbuf();
     other.logger_ = nullptr;
 }
+
 
 #ifdef _MSC_VER
     #pragma warning(pop)

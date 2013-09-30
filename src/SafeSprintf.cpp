@@ -1,4 +1,4 @@
-#include "SafeSprintf.h"
+#include "VTLogger/SafeSprintf.h"
 
 #include <stdexcept>
 #include <assert.h>

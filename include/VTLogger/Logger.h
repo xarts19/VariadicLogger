@@ -1,8 +1,6 @@
 #pragma once
 
-#include "SafeSprintf.h"
-
-#include "Util.h"
+#include "VTLogger/SafeSprintf.h"
 
 #include <ostream>
 #include <map>
@@ -12,10 +10,6 @@
 #include <stdexcept>
 #include <sstream>
 
-
-// define this macro if you don't want to use VTThread (you won't see thread id)
-//#define VT_LOGGER_DONT_USE_VTTHREAD
-
 // Hint: single logger is thread safe with respect to simultanious writing messages to the stream,
 // but not thread safe when mutating logger parameters
 
@@ -23,8 +17,7 @@
 //   * implement coloring (separate implementations for each platform)
 //   * add custom timestamp formatting
 /*
-    Example:
-        See VTCPPLoggerTest.cpp for example usage
+
 */
 
 namespace Ut
@@ -62,7 +55,8 @@ namespace Ut
     };
 
 
-    Ut::Logger& get_logger(const std::string& name, const std::string& copy_from = "");
+    Ut::Logger get_logger(const std::string& name);
+    void set_logger(const std::string& name, const Logger& logger);
 
 
     // logging functions should be thread-safe
@@ -116,7 +110,7 @@ namespace Ut
 
 
         // enable certain streams
-        // passing LL_NoLogging desables the stream
+        // passing LL_NoLogging disables the stream
         // pass nullptr as stream in set_stream when passing LL_NoLogging
 
         void set_cout(LogLevel reporting_level = LL_Debug);
@@ -256,8 +250,6 @@ namespace Ut
 
     private:
         friend class detail_::LogWorker;
-        friend Ut::Logger& get_logger(const std::string& name, const std::string& copy_from);
-
 
         // work function
 
@@ -275,23 +267,6 @@ namespace Ut
     // stream manipulator to surround next argument with quotes
     void quote(detail_::LogWorker& log_worker);
     inline const char* yes_no(bool flag) { return (flag ? "yes" : "no"); }
-
-
-    class LogManager
-    {
-
-
-    private:
-        friend Ut::Logger& get_logger(const std::string& name, const std::string& copy_from);
-
-        LogManager();
-        ~LogManager();
-
-        std::map<std::string, Ut::Logger> loggers_;
-
-        static LogManager self_;
-        static bool self_valid_;
-    };
 
 
     namespace detail_
