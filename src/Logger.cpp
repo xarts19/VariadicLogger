@@ -365,6 +365,7 @@ Ut::detail_::LogWorker::LogWorker(Logger* logger, LogLevel level)
     : logger_(logger)
     , msg_level_(level)
     , msg_stream_()
+    , options_(logger_->pimpl_->options)
     , quote_(false)
 {
     std::string out;
@@ -386,13 +387,20 @@ Ut::detail_::LogWorker::LogWorker(LogWorker&& other)
     : logger_(other.logger_)
     , msg_level_(other.msg_level_)
     , msg_stream_()
-    , options_(other.msg_level_)
+    , options_(other.options_)
     , quote_(other.quote_)
 {
     // FIXME: use msg_stream_ move constructor to move it
     // as soon as gcc supports it
     msg_stream_ << other.msg_stream_.rdbuf();
     other.logger_ = nullptr;
+}
+
+
+void Ut::detail_::LogWorker::optionally_add_space()
+{
+    if (!(options_ & LO_NoSpace))
+        msg_stream_ << " ";
 }
 
 

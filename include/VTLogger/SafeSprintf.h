@@ -161,7 +161,7 @@ namespace Ut
 
     // Version returning formatted string
     template <typename... Args>
-    std::string safe_sprintf(const std::string& fmt, Args&&... args)
+    std::string safe_sprintf_ret(const std::string& fmt, Args&&... args)
     {
         auto split = d_::split_format(fmt);
         d_::safe_sprintf_worker(0, split, std::forward<Args>(args)...);

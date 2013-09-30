@@ -1,16 +1,18 @@
 TEMPLATE = app
 CONFIG -= qt
 CONFIG += console
-TARGET = ../test
+TARGET = ../TestLogger
 
 !win32 {
     QMAKE_CXXFLAGS += -std=c++0x
+    LIBS += -lpthread
 }
 
 INCLUDEPATH += \
     ../include/
 
-unix|win32: LIBS += -l../VTLogger
+win32: LIBS += ../VTLogger.lib
+else:unix: LIBS += ../libVTLogger.a
 win32: PRE_TARGETDEPS += ../VTLogger.lib
 else:unix: PRE_TARGETDEPS += ../libVTLogger.a
 
@@ -32,3 +34,4 @@ HEADERS += \
 
 SOURCES += \
     test_main.cpp
+

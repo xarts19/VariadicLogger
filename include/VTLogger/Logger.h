@@ -295,8 +295,8 @@ namespace Ut
                     quote_ = false;
                 }
 
-                if (!(options_ & LO_NoSpace))
-                    msg_stream_ << " ";
+                optionally_add_space();
+
                 return *this;
             }
 
@@ -321,6 +321,8 @@ namespace Ut
         private:
             // deleted
             LogWorker& operator=(const LogWorker&);
+
+            void optionally_add_space();
 
             friend void Ut::quote(LogWorker& log_worker);
             

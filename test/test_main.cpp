@@ -18,8 +18,8 @@ void concurrent_test()
 {
     auto logger = Ut::Logger::cout("concurrent");
 
-    std::thread t1(std::bind(concur_test_fnc, logger));
-    std::thread t2(std::bind(concur_test_fnc, logger));
+    std::thread t1(concur_test_fnc, logger);
+    std::thread t2(concur_test_fnc, logger);
 
     t1.join();
     t2.join();
