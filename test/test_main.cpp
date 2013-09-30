@@ -30,6 +30,8 @@ int main(int /*argc*/, char* /*argv*/[])
 {
     auto logger = Ut::Logger::cout("default");
 
+    logger.log(Ut::LL_Debug, "{0:_^+#015,.3X}", 42.3);
+
     logger.debug() << "Hello" << 55 << "done";
     logger.debug() << std::hex << 11 << "done";
 

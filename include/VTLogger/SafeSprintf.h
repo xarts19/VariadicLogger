@@ -22,11 +22,14 @@
  *    precision   ::=  integer
  *    type        ::=  "b" | "c" | "d" | "e" | "E" | "f" | "F" | "g" | "G" | "n" | "o" | "s" | "x" | "X" | "%"
  *
+ *  For more info, see http://docs.python.org/3.3/library/string.html#formatspec
+ *
  */
 
 #include <string>
 #include <sstream>
 #include <vector>
+#include <type_traits>
 
 namespace Ut
 {
@@ -36,6 +39,13 @@ namespace Ut
         {
             SubstrAnchor,
             SubstrText
+        };
+
+        enum ValueType
+        {
+            VT_Integral,
+            VT_Floating,
+            VT_Other
         };
 
         struct Substring
@@ -79,20 +89,31 @@ namespace Ut
         Split split_format(const std::string& fmt);
         void join(std::string& out, const Split& split);
         bool has_index(const std::string& substr, int index);
-        void modify_stream(std::ostringstream& oss, const std::string format);
+        void modify_stream(std::ostringstream& oss, const std::string& format, ValueType type);
 
         template <typename A>
         Substring format_argument(const std::string& substr, A&& arg)
         {
             size_t pos = substr.find_first_of(":");
-            std::string format = substr.substr(pos + 1);
+            std::string format;
+
+            if (pos != substr.npos)
+                format = substr.substr(pos + 1);
+
             std::ostringstream oss;
-            modify_stream(oss, format);
+            ValueType type = VT_Other;
+
+            if (std::is_integral<A>::value)
+                type = VT_Integral;
+            else if (std::is_floating_point<A>::value)
+                type = VT_Floating;
+
+            modify_stream(oss, format, type);
             oss << arg;
             return Substring(SubstrText, oss.str());
         }
 
-        // No variadic templates in Visual Studio 2012
+// No variadic templates in Visual Studio 2012
 #ifndef _MSC_VER
 
         // base case for variadic template handling recursion
@@ -149,6 +170,7 @@ namespace Ut
     /*
      * Appends string formatted according to [fmt] and specified arguments [args] to [out] string.
      */
+// No variadic templates in Visual Studio 2012
 #ifndef _MSC_VER
 
     template <typename... Args>

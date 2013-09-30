@@ -269,7 +269,7 @@ void Ut::Logger::add_prelude(std::string& out, LogLevel level)
     if (!is_set(pimpl_->options, LO_NoLoggerName))
         safe_sprintf(out, "[{0}] ", pimpl_->name);
     if (!is_set(pimpl_->options, LO_NoThreadId))
-        safe_sprintf(out, "0x{0:X} ", std::this_thread::get_id());
+        safe_sprintf(out, "0x{0:x} ", std::this_thread::get_id());
     if (!is_set(pimpl_->options, LO_NoLogLevel))
         safe_sprintf(out, "<{0}> ", getLogLevel(level));
 }

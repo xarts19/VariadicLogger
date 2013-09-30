@@ -4,9 +4,7 @@
 
 #include <ostream>
 #include <map>
-#include <memory>
 #include <string>
-#include <vector>
 #include <stdexcept>
 #include <sstream>
 
@@ -144,6 +142,7 @@ namespace Ut
 
         // type-safe veriadic logging functions
 
+// No variadic templates in Visual Studio 2012
 #ifndef _MSC_VER
 
         template <typename... Args>
