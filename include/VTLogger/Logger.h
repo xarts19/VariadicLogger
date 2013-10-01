@@ -203,6 +203,23 @@ namespace Ut
 
 #else  // limit to 3 arguments
 
+        inline void log(ll::LogLevel level, const std::string& fmt)
+        {
+            assert(level != ll::nologging);
+            try
+            {
+                std::string msg;
+                add_prelude(msg, level);
+                safe_sprintf(msg, fmt);
+                add_epilog(msg, level);
+                write_to_streams(level, msg);
+            }
+            catch (const std::exception& ex)
+            {
+                throw std::runtime_error("Error while formatting '" + fmt + "': " + ex.what());
+            }
+        }
+
         template <typename A0>
         void log(ll::LogLevel level, const std::string& fmt, A0&& arg0)
         {

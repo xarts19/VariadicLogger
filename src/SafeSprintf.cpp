@@ -170,6 +170,7 @@ namespace
                 return A_Center;
             default:
                 assert(0 && "impossible");
+                return A_Right;
             };
         }
 
@@ -185,6 +186,7 @@ namespace
                 return S_Space;
             default:
                 assert(0 && "impossible");
+                return S_Negative;
             };
         }
     };

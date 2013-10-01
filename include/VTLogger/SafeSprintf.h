@@ -194,7 +194,7 @@ namespace Ut
 
 #else  // limit to 3 arguments
 
-    void safe_sprintf(std::string& out, const std::string& fmt)
+    inline void safe_sprintf(std::string& out, const std::string& fmt)
     {
         out.append(fmt);
     }
