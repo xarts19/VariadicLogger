@@ -7,6 +7,7 @@
 #include <string>
 #include <stdexcept>
 #include <sstream>
+#include <assert.h>
 
 // Hint: single logger is thread safe with respect to simultanious writing messages to the stream,
 // but not thread safe when mutating logger parameters
@@ -27,30 +28,36 @@ namespace Ut
 
     // enumerations
 
-    enum LogLevel
+    namespace ll
     {
-        LL_Debug       = 0,
-        LL_Info        = 1,
-        LL_Warning     = 2,
-        LL_Error       = 3,
-        LL_Critical    = 4,
-        LL_NoLogging   = 5
-    };
+        enum LogLevel
+        {
+            debug       = 0,
+            info        = 1,
+            warning     = 2,
+            error       = 3,
+            critical    = 4,
+            nologging   = 5
+        };
+    }
 
     // return LL_NoLogging on unknown strings
-    LogLevel LogLevel_from_str(const std::string& level);
+    ll::LogLevel LogLevel_from_str(const std::string& level);
 
-    enum LogOpts
+    namespace lo
     {
-        LO_Default     = 0u,
-        LO_NoEndl      = (1u << 0),
-        LO_NoLogLevel  = (1u << 1),
-        LO_NoTimestamp = (1u << 2),
-        LO_NoFlush     = (1u << 3),
-        LO_NoLoggerName= (1u << 4),
-        LO_NoThreadId  = (1u << 5),
-        LO_NoSpace     = (1u << 6)
-    };
+        enum LogOpts
+        {
+            usual        = 0u,
+            noendl       = (1u << 0),
+            nologlevel   = (1u << 1),
+            notimestamp  = (1u << 2),
+            noflush      = (1u << 3),
+            nologgername = (1u << 4),
+            nothreadid   = (1u << 5),
+            nospace      = (1u << 6)
+        };
+    }
 
 
     Ut::Logger get_logger(const std::string& name);
@@ -74,14 +81,14 @@ namespace Ut
 
         // convenience methods
 
-        static Logger cout(const std::string& name, LogLevel reporting_level = LL_Debug)
+        static Logger cout(const std::string& name, ll::LogLevel reporting_level = ll::debug)
         {
             Logger l(name);
             l.set_cout(reporting_level);
             return l;
         }
 
-        static Logger cerr(const std::string& name, LogLevel reporting_level = LL_Debug)
+        static Logger cerr(const std::string& name, ll::LogLevel reporting_level = ll::debug)
         {
             Logger l(name);
             l.set_cerr(reporting_level);
@@ -90,19 +97,19 @@ namespace Ut
 
         static Logger stream(const std::string& name,
                              const std::string& filename,
-                             LogLevel reporting_level = LL_Debug)
+                             ll::LogLevel reporting_level = ll::debug)
         {
             Logger l(name);
-            l.set_stream(filename, reporting_level);
+            l.add_stream(filename, reporting_level);
             return l;
         }
 
         static Logger stream(const std::string& name,
-                             std::FILE* stream,
-                             LogLevel reporting_level = LL_Debug)
+                             std::ostream* stream,
+                             ll::LogLevel reporting_level = ll::debug)
         {
             Logger l(name);
-            l.set_stream(stream, reporting_level);
+            l.add_stream(stream, reporting_level);
             return l;
         }
 
@@ -111,28 +118,29 @@ namespace Ut
         // passing LL_NoLogging disables the stream
         // pass nullptr as stream in set_stream when passing LL_NoLogging
 
-        void set_cout(LogLevel reporting_level = LL_Debug);
-        void set_cerr(LogLevel reporting_level = LL_Debug);
+        void set_cout(ll::LogLevel reporting_level = ll::debug);
+        void set_cerr(ll::LogLevel reporting_level = ll::debug);
 
         // logger assumes control of FILE object and closes it when
         // all copies of this logger are destroyed or have new stream set
-        bool set_stream(std::FILE* stream, LogLevel reporting_level = LL_Debug);
+        bool add_stream(std::ostream* stream, ll::LogLevel reporting_level = ll::debug);
 
         // returns false when failed to open the file
         // uses std::fopen, so use apropriate functions to get error codes
-        bool set_stream(const std::string& filename, LogLevel reporting_level = LL_Debug);
+        bool add_stream(const std::string& filename, ll::LogLevel reporting_level = ll::debug);
 
+        void clear_streams();
 
         // modify logger options
 
-        void set(LogOpts opt);
-        void unset(LogOpts opt);
+        void set(lo::LogOpts opt);
+        void unset(lo::LogOpts opt);
         void reset();
 
 
         // returns temporary object for atomic write
 
-        detail_::LogWorker log(LogLevel level);
+        detail_::LogWorker log(ll::LogLevel level);
 
         detail_::LogWorker debug();
         detail_::LogWorker info();
@@ -146,8 +154,9 @@ namespace Ut
 #ifndef _MSC_VER
 
         template <typename... Args>
-        void log(LogLevel level, const std::string& fmt, Args&&... args)
+        void log(ll::LogLevel level, const std::string& fmt, Args&&... args)
         {
+            assert(level != ll::nologging);
             try
             {
                 std::string msg;
@@ -165,38 +174,39 @@ namespace Ut
         template <typename... Args>
         void debug(const std::string& fmt, Args&&... args)
         {
-            log(LL_Debug, fmt, std::forward<Args>(args)...);
+            log(ll::debug, fmt, std::forward<Args>(args)...);
         }
 
         template <typename... Args>
         void info(const std::string& fmt, Args&&... args)
         {
-            log(LL_Info, fmt, std::forward<Args>(args)...);
+            log(ll::info, fmt, std::forward<Args>(args)...);
         }
 
         template <typename... Args>
         void warning(const std::string& fmt, Args&&... args)
         {
-            log(LL_Warning, fmt, std::forward<Args>(args)...);
+            log(ll::warning, fmt, std::forward<Args>(args)...);
         }
 
         template <typename... Args>
         void error(const std::string& fmt, Args&&... args)
         {
-            log(LL_Error, fmt, std::forward<Args>(args)...);
+            log(ll::error, fmt, std::forward<Args>(args)...);
         }
 
         template <typename... Args>
         void critical(const std::string& fmt, Args&&... args)
         {
-            log(LL_Critical, fmt, std::forward<Args>(args)...);
+            log(ll::critical, fmt, std::forward<Args>(args)...);
         }
 
 #else  // limit to 3 arguments
 
         template <typename A0>
-        void log(LogLevel level, const std::string& fmt, A0&& arg0)
+        void log(ll::LogLevel level, const std::string& fmt, A0&& arg0)
         {
+            assert(level != ll::nologging);
             try
             {
                 std::string msg;
@@ -212,8 +222,9 @@ namespace Ut
         }
 
         template <typename A0, typename A1>
-        void log(LogLevel level, const std::string& fmt, A0&& arg0, A1&& arg1)
+        void log(ll::LogLevel level, const std::string& fmt, A0&& arg0, A1&& arg1)
         {
+            assert(level != ll::nologging);
             try
             {
                 std::string msg;
@@ -229,8 +240,9 @@ namespace Ut
         }
 
         template <typename A0, typename A1, typename A2>
-        void log(LogLevel level, const std::string& fmt, A0&& arg0, A1&& arg1, A2&& arg2)
+        void log(ll::LogLevel level, const std::string& fmt, A0&& arg0, A1&& arg1, A2&& arg2)
         {
+            assert(level != ll::nologging);
             try
             {
                 std::string msg;
@@ -252,9 +264,9 @@ namespace Ut
 
         // work function
 
-        void add_prelude(std::string& out, LogLevel level);
-        void add_epilog(std::string& out, LogLevel level);
-        void write_to_streams(LogLevel level, const std::string& msg);
+        void add_prelude(std::string& out, ll::LogLevel level);
+        void add_epilog(std::string& out, ll::LogLevel level);
+        void write_to_streams(ll::LogLevel level, const std::string& msg);
 
         // private data
 
@@ -273,7 +285,7 @@ namespace Ut
         class LogWorker
         {
         public:
-            LogWorker(Logger* logger, LogLevel level);
+            LogWorker(Logger* logger, ll::LogLevel level);
             ~LogWorker();
 
             LogWorker(LogWorker&& other);
@@ -326,7 +338,7 @@ namespace Ut
             friend void Ut::quote(LogWorker& log_worker);
             
             Logger*            logger_;
-            LogLevel           msg_level_;
+            ll::LogLevel       msg_level_;
             std::ostringstream msg_stream_;
             unsigned int       options_;
             bool               quote_;

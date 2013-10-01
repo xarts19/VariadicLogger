@@ -194,6 +194,11 @@ namespace Ut
 
 #else  // limit to 3 arguments
 
+    void safe_sprintf(std::string& out, const std::string& fmt)
+    {
+        out.append(fmt);
+    }
+
     template <typename A0>
     void safe_sprintf(std::string& out, const std::string& fmt, A0&& arg0)
     {
