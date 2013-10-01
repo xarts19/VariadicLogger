@@ -13,4 +13,6 @@
 *.a
 
 *.pro.user
+*.log
+
 

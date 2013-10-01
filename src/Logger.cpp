@@ -121,35 +121,14 @@ struct Ut::Logger::Impl
     Impl(const std::string& name) :
         name        (name),
         stream      (nullptr),
-        stream_lock (),
         cout_level  (LL_NoLogging),
         cerr_level  (LL_NoLogging),
         stream_level(LL_NoLogging),
         options     (LO_Default)
     { }
 
-    Impl(const Impl& other) :
-        name        (other.name),
-        stream      (nullptr),
-        stream_lock (),
-        cout_level  (other.cout_level),
-        cerr_level  (other.cerr_level),
-        stream_level(other.stream_level),
-        options     (other.options)
-    {
-        std::lock_guard<std::mutex> l(stream_lock);
-        stream = other.stream;
-    }
-
-    ~Impl()
-    {
-        std::lock_guard<std::mutex> l(stream_lock);
-        stream = nullptr;
-    }
-
     std::string                    name;
-    std::shared_ptr<std::FILE>     stream;
-    std::mutex                     stream_lock;
+    std::shared_ptr<std::FILE>     stream;    // reference counting is atomic
     LogLevel                       cout_level;
     LogLevel                       cerr_level;
     LogLevel                       stream_level;
@@ -202,13 +181,11 @@ bool Ut::Logger::set_stream(std::FILE* stream, LogLevel reporting_level)
     if (stream)
     {
         pimpl_->stream_level = reporting_level;
-        std::lock_guard<std::mutex> lock(pimpl_->stream_lock);
         pimpl_->stream = std::shared_ptr<std::FILE>(stream, std::fclose);
     }
     else
     {
         pimpl_->stream_level = LL_NoLogging;
-        std::lock_guard<std::mutex> lock(pimpl_->stream_lock);
         pimpl_->stream = nullptr;
     }
 
@@ -298,6 +275,7 @@ void Ut::Logger::write_to_streams(LogLevel level, const std::string& msg)
     }
     if (level >= pimpl_->stream_level)
     {
+        assert(pimpl_->stream && "logging stream not set");
         fprintf(pimpl_->stream.get(), "%s", msg.c_str());
         fflush(pimpl_->stream.get());
     }

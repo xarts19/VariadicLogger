@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <assert.h>
 #include <ctype.h>
+#include <iomanip>
 
 
 Ut::d_::Split Ut::d_::split_format(const std::string& fmt)
@@ -126,7 +127,7 @@ namespace
         int precision;
         char type;
 
-        explicit Format(Ut::d_::ValueType type)
+        explicit Format(Ut::d_::ValueType vtype)
             : fill(' ')
             , align(A_Left)
             , sign(S_Negative)
@@ -134,13 +135,17 @@ namespace
             , width(0)
             , use_thousand_sep(false)
             , precision(-1)
-            , type('\0')
+            , type('s')
         {
-            switch (type)
+            switch (vtype)
             {
             case Ut::d_::VT_Integral:
+                type = 'd';
+                align = A_Right;
+                break;
             case Ut::d_::VT_Floating:
-                fill = '0';
+                type = 'g';
+                precision = 6;
                 align = A_Right;
                 break;
             case Ut::d_::VT_Other:
@@ -325,13 +330,119 @@ void Ut::d_::modify_stream(std::ostringstream& oss, const std::string& format, V
 {
     Format f = parse_format(format, type);
 
-    if (f.type == 'x' || f.type == 'X')
+    switch (f.type)
     {
+    // Integer presentation types:
+    case 'X':
+        oss << std::uppercase;
+    case 'x':
         oss << std::hex;
-        if (f.type == 'X')
-            oss << std::uppercase;
+        break;
+
+    case 'o':
+        oss << std::oct;
+        break;
+
+    case 'd':
+        oss << std::dec;
+        break;
+
+    case 'b':
+        // not impelemented
+        break;
+
+    case 'c':
+        // not impelemented
+        break;
+
+    case 'n':
+        // not impelemented
+        break;
+
+    // Floating point presentation types:
+    case 'E':
+        oss << std::uppercase;
+    case 'e':
+        oss << std::scientific;
+        break;
+
+    case 'F':
+        oss << std::uppercase;
+    case 'f':
+        oss << std::fixed;
+        break;
+
+    case 'G':
+    case 'g':
+        // default
+        oss << std::showpoint;
+        break;
+
+    case '%':
+        // not impelemented
+        break;
+
+    // String and default presentation types
+    case 's':
+    default:
+        break;
     }
 
+    switch (f.sign)
+    {
+    case S_Both:
+        oss << std::showpos;
+        break;
 
+    case S_Space:
+        // not implemented
+        break;
+
+    case S_Negative:
+    default:
+        // default
+        break;
+    }
+
+    if (f.alternate_form)
+    {
+        if (type == VT_Integral)
+            oss << std::showbase;
+        else if (type == VT_Floating)
+            oss << std::showpoint;
+    }
+
+    if (f.width != 0)
+    {
+        oss << std::setw(f.width);
+
+        // only has meaning if width is specified
+        oss << std::setfill(f.fill);
+        switch (f.align)
+        {
+        case A_Left:
+            oss << std::left;
+            break;
+
+        case A_Right:
+            oss << std::right;
+            break;
+
+        case A_Center:
+            // not implemented
+            break;
+
+        case A_SignAware:
+            oss << std::internal;
+            break;
+
+        default:
+            assert(0 && "impossible");
+            break;
+        }
+    }
+
+    if (f.precision != -1)
+        oss << std::setprecision(f.precision);
 }
 
