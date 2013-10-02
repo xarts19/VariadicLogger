@@ -57,10 +57,18 @@ vl::LogManager* vl::LogManager::self_ = nullptr;
 
 std::string createTimestamp()
 {
-    time_t     now      = time(0);
-    struct tm  timeinfo = *localtime(&now);
-    char       buf[80];
+    char buf[80];
+
+    auto now = std::chrono::system_clock::now();
+    time_t datetime = std::chrono::system_clock::to_time_t(now);
+    struct tm timeinfo = *localtime(&datetime);
     strftime(buf, sizeof(buf), TIMESTAMP_FORMAT, &timeinfo);
+
+    auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() % 1000;
+    std::stringstream ss;
+    ss << "[" << std::setfill('0') << std::setw(3) << millis << "]";
+    strcat(buf, ss.str().c_str());
+
     return buf;
 }
 

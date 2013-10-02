@@ -245,4 +245,3 @@ TEST_CASE( "safe_sprintf oct formatting")
     vl::safe_sprintf(out, "{0:#o}", 42);
     CHECK( out == "052" );
 }
-
