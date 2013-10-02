@@ -12,6 +12,9 @@
 //   * implement coloring (separate implementations for each platform)
 //   * add custom timestamp formatting
 /*
+    vl::Logger is typedef for vl::LoggerT<vl::delegate> - delegates writing of messages to LogManager's worker thread
+    vl::ImLogger is typedef for vl::LoggerT<vl::immediate> - writes log messages in current thread
+
     Example:
         First, you need to create LogManager in main() function:
             LogManager log_manager;
@@ -49,13 +52,12 @@ namespace vl
     // forward declarations
     namespace d_
     {
+        template <typename T>
         class LogWorker;
         struct Work;
         void queue_work(Work&& work);
     }
 
-    class Logger;
-    
 
     // enumerations
 
@@ -85,77 +87,58 @@ namespace vl
     };
 
 
-    vl::Logger get_logger(const std::string& name);
-    void set_logger(const Logger& logger);
-
-
-    class LogManager
-    {
-    public:
-        LogManager();
-        ~LogManager();
-
-    private:
-        friend vl::Logger get_logger(const std::string& name);
-        friend void set_logger(const Logger& logger);
-        friend void d_::queue_work(d_::Work&& work);
-
-        void writer_loop();
-
-        static LogManager* self_;
-
-        struct Impl;
-        Impl* d;
-    };
+    class delegate;
+    class immediate;
 
 
     // logging functions should be thread-safe
     // but anything that changes the logger is probably not
     // logger is copyable and copy will share file stream of
     // original logger
-    class Logger
+    template <typename T>
+    class LoggerT
     {
     public:
-        explicit Logger(const std::string& name);
-        ~Logger();
+        explicit LoggerT(const std::string& name);
+        ~LoggerT();
 
-        Logger(const Logger& other);
-        Logger& operator=(Logger other);
+        LoggerT(const LoggerT<T>& other);
+        LoggerT& operator=(LoggerT<T> other);
 
-        void swap(Logger& other);
+        void swap(LoggerT<T>& other);
 
         std::string name() const;
 
         // convenience methods
 
-        static Logger cout(const std::string& name, LogLevel reporting_level = vl::debug)
+        static LoggerT<T> cout(const std::string& name, LogLevel reporting_level = vl::debug)
         {
-            Logger l(name);
+            LoggerT<T> l(name);
             l.set_cout(reporting_level);
             return l;
         }
 
-        static Logger cerr(const std::string& name, LogLevel reporting_level = vl::debug)
+        static LoggerT<T> cerr(const std::string& name, LogLevel reporting_level = vl::debug)
         {
-            Logger l(name);
+            LoggerT<T> l(name);
             l.set_cerr(reporting_level);
             return l;
         }
 
-        static Logger stream(const std::string& name,
+        static LoggerT<T> stream(const std::string& name,
                              const std::string& filename,
                              LogLevel reporting_level = vl::debug)
         {
-            Logger l(name);
+            LoggerT<T> l(name);
             l.add_stream(filename, reporting_level);
             return l;
         }
 
-        static Logger stream(const std::string& name,
+        static LoggerT<T> stream(const std::string& name,
                              std::ostream* stream,
                              LogLevel reporting_level = vl::debug)
         {
-            Logger l(name);
+            LoggerT<T> l(name);
             l.add_stream(stream, reporting_level);
             return l;
         }
@@ -187,13 +170,13 @@ namespace vl
 
         // returns temporary object for atomic write
 
-        d_::LogWorker log(LogLevel level);
+        d_::LogWorker<T> log(LogLevel level);
 
-        d_::LogWorker debug();
-        d_::LogWorker info();
-        d_::LogWorker warning();
-        d_::LogWorker error();
-        d_::LogWorker critical();
+        d_::LogWorker<T> debug();
+        d_::LogWorker<T> info();
+        d_::LogWorker<T> warning();
+        d_::LogWorker<T> error();
+        d_::LogWorker<T> critical();
 
         // type-safe veriadic logging functions
 
@@ -323,12 +306,13 @@ namespace vl
 #endif
 
     private:
-        friend class d_::LogWorker;
+        friend class d_::LogWorker<T>;
 
         // work function
 
         void add_prelude(std::string& out, LogLevel level);
         void add_epilog(std::string& out, LogLevel level);
+
         void write_to_streams(LogLevel level, std::string&& msg);
 
         // private data
@@ -338,25 +322,49 @@ namespace vl
     };
 
 
-    // stream manipulator to surround next argument with quotes
-    void quote(d_::LogWorker& log_worker);
-    inline const char* yes_no(bool flag) { return (flag ? "yes" : "no"); }
+    typedef LoggerT<delegate> Logger;
+    typedef LoggerT<immediate> ImLogger;
+
+
+    vl::Logger get_logger(const std::string& name);
+    void set_logger(const Logger& logger);
+
+
+    class LogManager
+    {
+    public:
+        LogManager();
+        ~LogManager();
+
+    private:
+        friend vl::Logger get_logger(const std::string& name);
+        friend void set_logger(const Logger& logger);
+        friend void d_::queue_work(d_::Work&& work);
+
+        void writer_loop();
+
+        static LogManager* self_;
+
+        struct Impl;
+        Impl* d;
+    };
 
 
     namespace d_
     {
+        template <typename T>
         class LogWorker
         {
         public:
-            LogWorker(Logger* logger, LogLevel level);
+            LogWorker(LoggerT<T>* logger, LogLevel level);
             ~LogWorker();
 
             LogWorker(LogWorker&& other);
 
             // printers
 
-            template <typename T>
-            LogWorker& operator<<(T arg)
+            template <typename A>
+            LogWorker& operator<<(A arg)
             {
                 if (quote_)
                     msg_stream_ << '"';
@@ -397,10 +405,8 @@ namespace vl
             LogWorker& operator=(const LogWorker&);
 
             void optionally_add_space();
-
-            friend void vl::quote(LogWorker& log_worker);
             
-            Logger*            logger_;
+            LoggerT<T>*        logger_;
             LogLevel           msg_level_;
             std::ostringstream msg_stream_;
             unsigned int       options_;

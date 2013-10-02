@@ -16,6 +16,7 @@
 
 #include <time.h>
 #include <assert.h>
+#include <string.h>
 
 #define TIMESTAMP_FORMAT "%Y-%m-%d %H:%M:%S"
 
@@ -59,12 +60,32 @@ namespace vl
     }
 
 
-    struct Logger::Impl
+    // mutex is only needed for immediate output to synchronize access to streams
+    // when logging is done from worker thread, it is done only in one thread and
+    // don't need logging
+    template <typename T>
+    struct LoggerImplMutex;
+
+    template <>
+    struct LoggerImplMutex<vl::delegate> {};
+
+    template <>
+    struct LoggerImplMutex<vl::immediate>
+    {
+        LoggerImplMutex()
+            : mutex(new std::mutex)
+        { }
+
+        std::shared_ptr<std::mutex> mutex;
+    };
+
+
+    template <typename T>
+    struct LoggerT<T>::Impl : LoggerImplMutex<T>
     {
         Impl(const std::string& name) :
             name         (name),
             streams      (),
-            mutex        (new std::mutex),
             cout_level   (nologging),
             cerr_level   (nologging),
             streams_level(nologging),
@@ -73,7 +94,6 @@ namespace vl
 
         std::string                    name;
         std::vector<ostream_sptr>      streams;
-        std::shared_ptr<std::mutex>    mutex;
         LogLevel                       cout_level;
         LogLevel                       cerr_level;
         LogLevel                       streams_level;
@@ -96,6 +116,7 @@ namespace vl
 
 
 vl::LogManager::LogManager()
+    : d(new Impl)
 {
     if (self_ != nullptr)
         throw std::runtime_error("LogManager already created");
@@ -109,11 +130,13 @@ vl::LogManager::LogManager()
 vl::LogManager::~LogManager()
 {
     d->is_running_.store(false);
+    d->new_msgs_event_.signal();
 
     if (d->writer_thread_.joinable())
         d->writer_thread_.join();
 
     self_ = nullptr;
+    delete d;
 }
 
 
@@ -134,9 +157,12 @@ void vl::LogManager::writer_loop()
 {
     Impl::queue_type tmp_queue_;
 
-    while (d->is_running_.load())
+    for (;;)
     {
         d->new_msgs_event_.wait();
+
+        if (!d->is_running_.load())
+            break;
 
         {
             std::lock_guard<std::mutex> lock(d->lock_);
@@ -283,50 +309,65 @@ namespace
 }
 
 
-vl::Logger::Logger(const std::string& name)
+template <typename T>
+vl::LoggerT<T>::LoggerT(const std::string& name)
     : pimpl_(new Impl(name))
 {
 }
 
-vl::Logger::~Logger()
+
+template <typename T>
+vl::LoggerT<T>::~LoggerT()
 {
     delete pimpl_;
 }
 
-vl::Logger::Logger(const Logger& other)
+
+template <typename T>
+vl::LoggerT<T>::LoggerT(const LoggerT<T>& other)
     : pimpl_(new Impl(*other.pimpl_))
 {
 }
 
-vl::Logger& vl::Logger::operator=(Logger other)
+
+template <typename T>
+vl::LoggerT<T>& vl::LoggerT<T>::operator=(LoggerT<T> other)
 {
     swap(other);
     return *this;
 }
 
-void vl::Logger::swap(Logger& other)
+
+template <typename T>
+void vl::LoggerT<T>::swap(LoggerT<T>& other)
 {
     std::swap(pimpl_, other.pimpl_);
 }
 
 
-std::string vl::Logger::name() const
+template <typename T>
+std::string vl::LoggerT<T>::name() const
 {
     return pimpl_->name;
 }
 
 
-void vl::Logger::set_cout(LogLevel reporting_level)
+template <typename T>
+void vl::LoggerT<T>::set_cout(LogLevel reporting_level)
 {
     pimpl_->cout_level = reporting_level;
 }
 
-void vl::Logger::set_cerr(LogLevel reporting_level)
+
+template <typename T>
+void vl::LoggerT<T>::set_cerr(LogLevel reporting_level)
 {
     pimpl_->cerr_level = reporting_level;
 }
 
-bool vl::Logger::add_stream(std::ostream* stream, LogLevel reporting_level)
+
+template <typename T>
+bool vl::LoggerT<T>::add_stream(std::ostream* stream, LogLevel reporting_level)
 {
     assert(stream != nullptr && reporting_level != nologging);
     pimpl_->streams.push_back(std::shared_ptr<std::ostream>(stream));
@@ -334,7 +375,9 @@ bool vl::Logger::add_stream(std::ostream* stream, LogLevel reporting_level)
     return true;
 }
 
-bool vl::Logger::add_stream(const std::string& filename, LogLevel reporting_level)
+
+template <typename T>
+bool vl::LoggerT<T>::add_stream(const std::string& filename, LogLevel reporting_level)
 {
     assert(!filename.empty() && reporting_level != nologging);
 
@@ -361,41 +404,49 @@ bool vl::Logger::add_stream(const std::string& filename, LogLevel reporting_leve
 }
 
 
-void vl::Logger::clear_streams()
+template <typename T>
+void vl::LoggerT<T>::clear_streams()
 {
     pimpl_->streams.clear();
 }
 
 
-void vl::Logger::set(LogOpts opt)
+template <typename T>
+void vl::LoggerT<T>::set(LogOpts opt)
 {
     ::set(pimpl_->options, opt);
 }
 
-void vl::Logger::unset(LogOpts opt)
+
+template <typename T>
+void vl::LoggerT<T>::unset(LogOpts opt)
 {
     ::unset(pimpl_->options, opt);
 }
 
-void vl::Logger::reset()
+
+template <typename T>
+void vl::LoggerT<T>::reset()
 {
     pimpl_->options = usual;
 }
 
 
-vl::d_::LogWorker vl::Logger::log(LogLevel level)
+template <typename T>
+vl::d_::LogWorker<T> vl::LoggerT<T>::log(LogLevel level)
 {
     assert(level != nologging);
-    return d_::LogWorker(this, level);
+    return d_::LogWorker<T>(this, level);
 }
-vl::d_::LogWorker vl::Logger::debug()   { return log(vl::debug); }
-vl::d_::LogWorker vl::Logger::info()    { return log(vl::info); }
-vl::d_::LogWorker vl::Logger::warning() { return log(vl::warning); }
-vl::d_::LogWorker vl::Logger::error()   { return log(vl::error); }
-vl::d_::LogWorker vl::Logger::critical(){ return log(vl::critical); }
+template <typename T> vl::d_::LogWorker<T> vl::LoggerT<T>::debug()   { return log(vl::debug); }
+template <typename T> vl::d_::LogWorker<T> vl::LoggerT<T>::info()    { return log(vl::info); }
+template <typename T> vl::d_::LogWorker<T> vl::LoggerT<T>::warning() { return log(vl::warning); }
+template <typename T> vl::d_::LogWorker<T> vl::LoggerT<T>::error()   { return log(vl::error); }
+template <typename T> vl::d_::LogWorker<T> vl::LoggerT<T>::critical(){ return log(vl::critical); }
 
 
-void vl::Logger::add_prelude(std::string& out, LogLevel level)
+template <typename T>
+void vl::LoggerT<T>::add_prelude(std::string& out, LogLevel level)
 {
     if (!is_set(pimpl_->options, notimestamp))
         safe_sprintf(out, "{0} ", createTimestamp());
@@ -408,31 +459,57 @@ void vl::Logger::add_prelude(std::string& out, LogLevel level)
 }
 
 
-void vl::Logger::add_epilog(std::string& out, LogLevel /*level*/)
+template <typename T>
+void vl::LoggerT<T>::add_epilog(std::string& out, LogLevel /*level*/)
 {
     if (!is_set(pimpl_->options, noendl))
         out.push_back('\n');
 }
 
 
-void vl::Logger::write_to_streams(LogLevel level, std::string&& msg)
+namespace vl
 {
-    d_::queue_work(d_::Work(std::move(msg),
-                            level >= pimpl_->cout_level,
-                            level >= pimpl_->cerr_level,
-                            (level >= pimpl_->streams_level && !pimpl_->streams.empty()
-                                ? pimpl_->streams
-                                : std::vector<ostream_sptr>())));
+    template <>
+    void LoggerT<vl::delegate>::write_to_streams(LogLevel level, std::string&& msg)
+    {
+        d_::queue_work(d_::Work(std::move(msg),
+                                level >= pimpl_->cout_level,
+                                level >= pimpl_->cerr_level,
+                                (level >= pimpl_->streams_level && !pimpl_->streams.empty()
+                                    ? pimpl_->streams
+                                    : std::vector<ostream_sptr>())));
+    }
+
+
+    template <>
+    void LoggerT<vl::immediate>::write_to_streams(LogLevel level, std::string&& msg)
+    {
+        if (level >= pimpl_->cout_level)
+        {
+            fprintf(stdout, "%s", msg.c_str());
+            fflush(stdout);
+        }
+        if (level >= pimpl_->cerr_level)
+        {
+            fprintf(stderr, "%s", msg.c_str());
+            fflush(stderr);
+        }
+        if (level >= pimpl_->streams_level && !pimpl_->streams.empty())
+        {
+            std::lock_guard<std::mutex> l(*pimpl_->mutex);
+
+            for (ostream_sptr& stream : pimpl_->streams)
+            {
+                *stream << msg;
+                stream->flush();
+            }
+        }
+    }
 }
 
 
-void vl::quote(d_::LogWorker& log_worker)
-{
-    log_worker.quote_ = true;
-}
-
-
-vl::d_::LogWorker::LogWorker(Logger* logger, LogLevel level)
+template <typename T>
+vl::d_::LogWorker<T>::LogWorker(LoggerT<T>* logger, LogLevel level)
     : logger_(logger)
     , msg_level_(level)
     , msg_stream_()
@@ -445,7 +522,8 @@ vl::d_::LogWorker::LogWorker(Logger* logger, LogLevel level)
 }
 
 
-vl::d_::LogWorker::~LogWorker()
+template <typename T>
+vl::d_::LogWorker<T>::~LogWorker()
 {
     assert(logger_);
     std::string msg(msg_stream_.str());
@@ -454,7 +532,8 @@ vl::d_::LogWorker::~LogWorker()
 }
 
 
-vl::d_::LogWorker::LogWorker(LogWorker&& other)
+template <typename T>
+vl::d_::LogWorker<T>::LogWorker(LogWorker&& other)
     : logger_(other.logger_)
     , msg_level_(other.msg_level_)
     , msg_stream_()
@@ -468,11 +547,18 @@ vl::d_::LogWorker::LogWorker(LogWorker&& other)
 }
 
 
-void vl::d_::LogWorker::optionally_add_space()
+template <typename T>
+void vl::d_::LogWorker<T>::optionally_add_space()
 {
     if (!(options_ & nospace))
         msg_stream_ << " ";
 }
+
+template class vl::d_::LogWorker<vl::delegate>;
+template class vl::d_::LogWorker<vl::immediate>;
+
+template class vl::LoggerT<vl::delegate>;
+template class vl::LoggerT<vl::immediate>;
 
 
 #ifdef _MSC_VER

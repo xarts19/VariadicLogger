@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 
-void concur_test_fnc(vl::Logger logger)
+void concur_test_fnc(vl::ImLogger logger)
 {
     for (int i = 0; i < 40; ++i)
     {
@@ -22,7 +22,7 @@ void concur_test_fnc(vl::Logger logger)
 TEST_CASE( "Concurrent logging")
 {
     std::stringstream* out = new std::stringstream;
-    vl::Logger logger("concurrent");
+    vl::ImLogger logger("concurrent");
     logger.add_stream(out);
     logger.set(vl::notimestamp);
     logger.set(vl::nothreadid);
@@ -60,7 +60,7 @@ TEST_CASE( "Concurrent logging")
 
 TEST_CASE( "Stream logging" )
 {
-    vl::Logger l("default");
+    vl::ImLogger l("default");
 
     l.set(vl::notimestamp);
     l.set(vl::nothreadid);
@@ -191,7 +191,7 @@ TEST_CASE ( "File logging" )
         f.close();
     }
 
-    auto fl = vl::Logger::stream("file", log_filename);
+    auto fl = vl::ImLogger::stream("file", log_filename);
 
     fl.set(vl::notimestamp);
     fl.set(vl::nothreadid);
@@ -250,6 +250,6 @@ TEST_CASE( "safe_sprintf oct formatting")
 
 int main(int argc, char* argv[])
 {
-    vl::LogManager();
+    vl::LogManager lm;
     return Catch::Session().run(argc, argv);
 }

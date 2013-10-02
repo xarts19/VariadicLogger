@@ -21,6 +21,10 @@ else {
   CONFIG += release
 }
 
+CONFIG( debug, debug|release )  {
+    #DEFINES += _GLIBCXX_DEBUG
+}
+
 # Input
 HEADERS += \
     ../include/VariadicLogger/SafeSprintf.h \
