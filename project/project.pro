@@ -24,8 +24,10 @@ else {
 # Input
 HEADERS += \
     ../include/VariadicLogger/SafeSprintf.h \
-    ../include/VariadicLogger/Logger.h
+    ../include/VariadicLogger/Logger.h \
+    ../include/VariadicLogger/Event.h
 
 SOURCES += \
     ../src/SafeSprintf.cpp \
-    ../src/Logger.cpp
+    ../src/Logger.cpp \
+    ../src/Event.cpp

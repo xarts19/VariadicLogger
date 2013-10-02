@@ -1,4 +1,5 @@
-#define CATCH_CONFIG_MAIN
+//#define CATCH_CONFIG_MAIN
+#define CATCH_CONFIG_RUNNER
 #include "catch.hpp"
 
 #include "VariadicLogger/Logger.h"
@@ -244,4 +245,11 @@ TEST_CASE( "safe_sprintf oct formatting")
     out.clear();
     vl::safe_sprintf(out, "{0:#o}", 42);
     CHECK( out == "052" );
+}
+
+
+int main(int argc, char* argv[])
+{
+    vl::LogManager();
+    return Catch::Session().run(argc, argv);
 }

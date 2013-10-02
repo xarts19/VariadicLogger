@@ -11,7 +11,6 @@
 // TODO:
 //   * implement coloring (separate implementations for each platform)
 //   * add custom timestamp formatting
-//   * add worker thread for writing (use thread-safe queue)
 /*
     Example:
         First, you need to create LogManager in main() function:
@@ -48,7 +47,13 @@
 namespace vl
 {
     // forward declarations
-    namespace detail_ { class LogWorker; }
+    namespace d_
+    {
+        class LogWorker;
+        struct Work;
+        void queue_work(Work&& work);
+    }
+
     class Logger;
     
 
@@ -82,6 +87,26 @@ namespace vl
 
     vl::Logger get_logger(const std::string& name);
     void set_logger(const Logger& logger);
+
+
+    class LogManager
+    {
+    public:
+        LogManager();
+        ~LogManager();
+
+    private:
+        friend vl::Logger get_logger(const std::string& name);
+        friend void set_logger(const Logger& logger);
+        friend void d_::queue_work(d_::Work&& work);
+
+        void writer_loop();
+
+        static LogManager* self_;
+
+        struct Impl;
+        Impl* d;
+    };
 
 
     // logging functions should be thread-safe
@@ -162,13 +187,13 @@ namespace vl
 
         // returns temporary object for atomic write
 
-        detail_::LogWorker log(LogLevel level);
+        d_::LogWorker log(LogLevel level);
 
-        detail_::LogWorker debug();
-        detail_::LogWorker info();
-        detail_::LogWorker warning();
-        detail_::LogWorker error();
-        detail_::LogWorker critical();
+        d_::LogWorker debug();
+        d_::LogWorker info();
+        d_::LogWorker warning();
+        d_::LogWorker error();
+        d_::LogWorker critical();
 
         // type-safe veriadic logging functions
 
@@ -184,7 +209,7 @@ namespace vl
                 add_prelude(msg, level);
                 safe_sprintf(msg, fmt, std::forward<Args>(args)...);
                 add_epilog(msg, level);
-                write_to_streams(level, msg);
+                write_to_streams(level, std::move(msg));
             }
             catch (const std::exception& ex)
             {
@@ -233,7 +258,7 @@ namespace vl
                 add_prelude(msg, level);
                 safe_sprintf(msg, fmt);
                 add_epilog(msg, level);
-                write_to_streams(level, msg);
+                write_to_streams(level, std::move(msg));
             }
             catch (const std::exception& ex)
             {
@@ -251,7 +276,7 @@ namespace vl
                 add_prelude(msg, level);
                 safe_sprintf(msg, fmt, std::forward<A0>(arg0));
                 add_epilog(msg, level);
-                write_to_streams(level, msg);
+                write_to_streams(level, std::move(msg));
             }
             catch (const std::exception& ex)
             {
@@ -269,7 +294,7 @@ namespace vl
                 add_prelude(msg, level);
                 safe_sprintf(msg, fmt, std::forward<A0>(arg0), std::forward<A1>(arg1));
                 add_epilog(msg, level);
-                write_to_streams(level, msg);
+                write_to_streams(level, std::move(msg));
             }
             catch (const std::exception& ex)
             {
@@ -287,7 +312,7 @@ namespace vl
                 add_prelude(msg, level);
                 safe_sprintf(msg, fmt, std::forward<A0>(arg0), std::forward<A1>(arg1), std::forward<A2>(arg2));
                 add_epilog(msg, level);
-                write_to_streams(level, msg);
+                write_to_streams(level, std::move(msg));
             }
             catch (const std::exception& ex)
             {
@@ -298,13 +323,13 @@ namespace vl
 #endif
 
     private:
-        friend class detail_::LogWorker;
+        friend class d_::LogWorker;
 
         // work function
 
         void add_prelude(std::string& out, LogLevel level);
         void add_epilog(std::string& out, LogLevel level);
-        void write_to_streams(LogLevel level, const std::string& msg);
+        void write_to_streams(LogLevel level, std::string&& msg);
 
         // private data
 
@@ -314,11 +339,11 @@ namespace vl
 
 
     // stream manipulator to surround next argument with quotes
-    void quote(detail_::LogWorker& log_worker);
+    void quote(d_::LogWorker& log_worker);
     inline const char* yes_no(bool flag) { return (flag ? "yes" : "no"); }
 
 
-    namespace detail_
+    namespace d_
     {
         class LogWorker
         {
@@ -376,7 +401,7 @@ namespace vl
             friend void vl::quote(LogWorker& log_worker);
             
             Logger*            logger_;
-            LogLevel       msg_level_;
+            LogLevel           msg_level_;
             std::ostringstream msg_stream_;
             unsigned int       options_;
             bool               quote_;

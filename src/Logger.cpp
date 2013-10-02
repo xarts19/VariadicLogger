@@ -1,5 +1,7 @@
 #include "VariadicLogger/Logger.h"
 
+#include "VariadicLogger/Event.h"
+
 #include <thread>
 #include <memory>
 #include <mutex>
@@ -8,6 +10,9 @@
 #include <iomanip>
 #include <fstream>
 #include <map>
+#include <atomic>
+#include <queue>
+#include <list>
 
 #include <time.h>
 #include <assert.h>
@@ -27,32 +32,181 @@
 #endif
 
 
+vl::LogManager* vl::LogManager::self_ = nullptr;
+
+
 namespace vl
 {
-    class LogManager
+    typedef std::shared_ptr<std::ostream> ostream_sptr;
+
+
+    namespace d_
     {
-    private:
-        friend vl::Logger get_logger(const std::string& name);
-        friend void set_logger(const Logger& logger);
-
-        LogManager()
+        struct Work
         {
-            if (self_ == nullptr)
-                self_ = this;
-            else
-                throw std::runtime_error("LogManager already created");
-        }
-        ~LogManager() { self_ = nullptr; }
+            Work(std::string&& m, bool cout, bool cerr, const std::vector<ostream_sptr>& ss)
+                : use_cout(cout)
+                , use_cerr(cerr)
+                , streams(ss)
+                , msg(std::move(m))
+            { }
 
-        static LogManager* self_;
+            bool use_cout;
+            bool use_cerr;
+            std::vector<ostream_sptr> streams;
+            std::string msg;
+        };
+    }
+
+
+    struct Logger::Impl
+    {
+        Impl(const std::string& name) :
+            name         (name),
+            streams      (),
+            mutex        (new std::mutex),
+            cout_level   (nologging),
+            cerr_level   (nologging),
+            streams_level(nologging),
+            options      (usual)
+        { }
+
+        std::string                    name;
+        std::vector<ostream_sptr>      streams;
+        std::shared_ptr<std::mutex>    mutex;
+        LogLevel                       cout_level;
+        LogLevel                       cerr_level;
+        LogLevel                       streams_level;
+        unsigned int                   options;  // LogOpts flags
+    };
+
+
+    struct LogManager::Impl
+    {
+        typedef std::queue<d_::Work, std::list<d_::Work>> queue_type;
 
         std::mutex lock_;
         std::map<std::string, vl::Logger> loggers_;
-        std::thread thread_;
+        std::atomic<bool> is_running_;
+        std::thread writer_thread_;
+        queue_type msg_queue_;
+        vl::Event new_msgs_event_;
     };
 }
 
-vl::LogManager* vl::LogManager::self_ = nullptr;
+
+vl::LogManager::LogManager()
+{
+    if (self_ != nullptr)
+        throw std::runtime_error("LogManager already created");
+
+    self_ = this;
+    d->is_running_.store(true);
+    d->writer_thread_ = std::thread(&vl::LogManager::writer_loop, this);
+}
+
+
+vl::LogManager::~LogManager()
+{
+    d->is_running_.store(false);
+
+    if (d->writer_thread_.joinable())
+        d->writer_thread_.join();
+
+    self_ = nullptr;
+}
+
+
+void vl::d_::queue_work(d_::Work&& work)
+{
+    if (!LogManager::self_)
+    {
+        throw std::runtime_error("Trying to log messages without valid LogManager");
+    }
+
+    std::lock_guard<std::mutex> lock(LogManager::self_->d->lock_);
+    LogManager::self_->d->msg_queue_.push(std::move(work));
+    LogManager::self_->d->new_msgs_event_.signal();
+}
+
+
+void vl::LogManager::writer_loop()
+{
+    Impl::queue_type tmp_queue_;
+
+    while (d->is_running_.load())
+    {
+        d->new_msgs_event_.wait();
+
+        {
+            std::lock_guard<std::mutex> lock(d->lock_);
+            tmp_queue_.swap(d->msg_queue_);
+            d->new_msgs_event_.reset();
+        }
+
+        while (!tmp_queue_.empty())
+        {
+            d_::Work& work = tmp_queue_.front();
+
+            if (work.use_cout)
+            {
+                std::cout << work.msg;
+                std::cout.flush();
+            }
+            if (work.use_cerr)
+            {
+                std::cerr << work.msg;
+                std::cerr.flush();
+            }
+            for (ostream_sptr& stream : work.streams)
+            {
+                *stream << work.msg;
+                stream->flush();
+            }
+
+            tmp_queue_.pop();
+        }
+    }
+}
+
+
+vl::Logger vl::get_logger(const std::string& name)
+{
+    if (!LogManager::self_)
+    {
+        throw std::runtime_error("Trying to get logger without valid LogManager");
+    }
+
+    std::lock_guard<std::mutex> lock(LogManager::self_->d->lock_);
+
+    auto it = LogManager::self_->d->loggers_.find(name);
+    if (it != LogManager::self_->d->loggers_.end())
+        return it->second;
+
+    auto pair = LogManager::self_->d->loggers_.insert(std::make_pair(name, Logger::cout(name)));
+    return pair.first->second;
+}
+
+
+void vl::set_logger(const Logger& logger)
+{
+    if (!LogManager::self_)
+    {
+        throw std::runtime_error("Trying to set logger without valid LogManager");
+    }
+
+    std::lock_guard<std::mutex> lock(LogManager::self_->d->lock_);
+
+    auto it = LogManager::self_->d->loggers_.find(logger.name());
+    if (it != LogManager::self_->d->loggers_.end())
+    {
+        it->second = logger;
+    }
+    else
+    {
+        LogManager::self_->d->loggers_.insert(std::make_pair(logger.name(), logger));
+    }
+}
 
 
 std::string createTimestamp()
@@ -127,33 +281,6 @@ namespace
         options &= ~opt;
     }
 }
-
-
-
-struct vl::Logger::Impl
-{
-    Impl(const std::string& name) :
-        name         (name),
-        streams      (),
-        mutex        (new std::mutex),
-        cout_level   (nologging),
-        cerr_level   (nologging),
-        streams_level(nologging),
-        options      (usual)
-    { }
-
-    // reference counting is atomic, so no need to lock in copy constructors
-    typedef std::shared_ptr<std::ostream> ostream_sptr;
-    typedef std::shared_ptr<std::mutex> mutex_sptr;
-
-    std::string                    name;
-    std::vector<ostream_sptr>      streams;
-    mutex_sptr                     mutex;
-    LogLevel                   cout_level;
-    LogLevel                   cerr_level;
-    LogLevel                   streams_level;
-    unsigned int                   options;  // LogOpts flags
-};
 
 
 vl::Logger::Logger(const std::string& name)
@@ -256,16 +383,16 @@ void vl::Logger::reset()
 }
 
 
-vl::detail_::LogWorker vl::Logger::log(LogLevel level)
+vl::d_::LogWorker vl::Logger::log(LogLevel level)
 {
     assert(level != nologging);
-    return detail_::LogWorker(this, level);
+    return d_::LogWorker(this, level);
 }
-vl::detail_::LogWorker vl::Logger::debug()   { return log(vl::debug); }
-vl::detail_::LogWorker vl::Logger::info()    { return log(vl::info); }
-vl::detail_::LogWorker vl::Logger::warning() { return log(vl::warning); }
-vl::detail_::LogWorker vl::Logger::error()   { return log(vl::error); }
-vl::detail_::LogWorker vl::Logger::critical(){ return log(vl::critical); }
+vl::d_::LogWorker vl::Logger::debug()   { return log(vl::debug); }
+vl::d_::LogWorker vl::Logger::info()    { return log(vl::info); }
+vl::d_::LogWorker vl::Logger::warning() { return log(vl::warning); }
+vl::d_::LogWorker vl::Logger::error()   { return log(vl::error); }
+vl::d_::LogWorker vl::Logger::critical(){ return log(vl::critical); }
 
 
 void vl::Logger::add_prelude(std::string& out, LogLevel level)
@@ -288,77 +415,24 @@ void vl::Logger::add_epilog(std::string& out, LogLevel /*level*/)
 }
 
 
-void vl::Logger::write_to_streams(LogLevel level, const std::string& msg)
+void vl::Logger::write_to_streams(LogLevel level, std::string&& msg)
 {
-    if (level >= pimpl_->cout_level)
-    {
-        fprintf(stdout, "%s", msg.c_str());
-        fflush(stdout);
-    }
-    if (level >= pimpl_->cerr_level)
-    {
-        fprintf(stderr, "%s", msg.c_str());
-        fflush(stderr);
-    }
-    if (level >= pimpl_->streams_level && !pimpl_->streams.empty())
-    {
-        std::lock_guard<std::mutex> l(*pimpl_->mutex);
-
-        for (Impl::ostream_sptr& stream : pimpl_->streams)
-        {
-            *stream << msg;
-            stream->flush();
-        }
-    }
+    d_::queue_work(d_::Work(std::move(msg),
+                            level >= pimpl_->cout_level,
+                            level >= pimpl_->cerr_level,
+                            (level >= pimpl_->streams_level && !pimpl_->streams.empty()
+                                ? pimpl_->streams
+                                : std::vector<ostream_sptr>())));
 }
 
 
-void vl::quote(detail_::LogWorker& log_worker)
+void vl::quote(d_::LogWorker& log_worker)
 {
     log_worker.quote_ = true;
 }
 
 
-vl::Logger vl::get_logger(const std::string& name)
-{
-    if (!LogManager::self_)
-    {
-        throw std::runtime_error("Trying to get logger without valid LogManager");
-    }
-
-    std::lock_guard<std::mutex> lock(LogManager::self_->lock_);
-
-    auto it = LogManager::self_->loggers_.find(name);
-    if (it != LogManager::self_->loggers_.end())
-        return it->second;
-
-    auto pair = LogManager::self_->loggers_.insert(std::make_pair(name, Logger::cout(name)));
-    return pair.first->second;
-}
-
-
-void vl::set_logger(const Logger& logger)
-{
-    if (!LogManager::self_)
-    {
-        throw std::runtime_error("Trying to set logger without valid LogManager");
-    }
-
-    std::lock_guard<std::mutex> lock(LogManager::self_->lock_);
-
-    auto it = LogManager::self_->loggers_.find(logger.name());
-    if (it != LogManager::self_->loggers_.end())
-    {
-        it->second = logger;
-    }
-    else
-    {
-        LogManager::self_->loggers_.insert(std::make_pair(logger.name(), logger));
-    }
-}
-
-
-vl::detail_::LogWorker::LogWorker(Logger* logger, LogLevel level)
+vl::d_::LogWorker::LogWorker(Logger* logger, LogLevel level)
     : logger_(logger)
     , msg_level_(level)
     , msg_stream_()
@@ -371,16 +445,16 @@ vl::detail_::LogWorker::LogWorker(Logger* logger, LogLevel level)
 }
 
 
-vl::detail_::LogWorker::~LogWorker()
+vl::d_::LogWorker::~LogWorker()
 {
     assert(logger_);
-    std::string out(msg_stream_.str());
-    logger_->add_epilog(out, msg_level_);
-    logger_->write_to_streams(msg_level_, out);
+    std::string msg(msg_stream_.str());
+    logger_->add_epilog(msg, msg_level_);
+    logger_->write_to_streams(msg_level_, std::move(msg));
 }
 
 
-vl::detail_::LogWorker::LogWorker(LogWorker&& other)
+vl::d_::LogWorker::LogWorker(LogWorker&& other)
     : logger_(other.logger_)
     , msg_level_(other.msg_level_)
     , msg_stream_()
@@ -394,7 +468,7 @@ vl::detail_::LogWorker::LogWorker(LogWorker&& other)
 }
 
 
-void vl::detail_::LogWorker::optionally_add_space()
+void vl::d_::LogWorker::optionally_add_space()
 {
     if (!(options_ & nospace))
         msg_stream_ << " ";
