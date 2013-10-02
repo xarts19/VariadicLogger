@@ -1,4 +1,4 @@
-#include "VTLogger/Logger.h"
+#include "VariadicLogger/Logger.h"
 
 #include <thread>
 #include <memory>
@@ -7,6 +7,7 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <map>
 
 #include <time.h>
 #include <assert.h>
@@ -26,29 +27,32 @@
 #endif
 
 
-namespace Ut
+namespace vl
 {
     class LogManager
     {
     private:
-        friend Ut::Logger get_logger(const std::string& name);
-        friend void set_logger(const std::string& name, const Logger& logger);
+        friend vl::Logger get_logger(const std::string& name);
+        friend void set_logger(const Logger& logger);
 
-        LogManager();
-        ~LogManager();
+        LogManager()
+        {
+            if (self_ == nullptr)
+                self_ = this;
+            else
+                throw std::runtime_error("LogManager already created");
+        }
+        ~LogManager() { self_ = nullptr; }
 
-        std::map<std::string, Ut::Logger> loggers_;
-
-        static LogManager self_;
-        static bool self_valid_;
+        static LogManager* self_;
 
         std::mutex lock_;
+        std::map<std::string, vl::Logger> loggers_;
+        std::thread thread_;
     };
 }
 
-
-Ut::LogManager Ut::LogManager::self_;
-bool Ut::LogManager::self_valid_ = false;
+vl::LogManager* vl::LogManager::self_ = nullptr;
 
 
 std::string createTimestamp()
@@ -61,35 +65,35 @@ std::string createTimestamp()
 }
 
 
-Ut::ll::LogLevel Ut::LogLevel_from_str(const std::string& level)
+vl::LogLevel vl::LogLevel_from_str(const std::string& level)
 {
     if (level == LL_DEBUG)
-        return ll::debug;
+        return debug;
     else if (level == LL_INFO)
-        return ll::info;
+        return info;
     else if (level == LL_WARNING)
-        return ll::warning;
+        return warning;
     else if (level == LL_ERROR)
-        return ll::error;
+        return error;
     else if (level == LL_CRITICAL)
-        return ll::critical;
+        return critical;
     else
-        return ll::nologging;
+        return nologging;
 }
 
-const char* getLogLevel(Ut::ll::LogLevel l)
+const char* getLogLevel(vl::LogLevel l)
 {
     switch (l)
     {
-    case Ut::ll::debug:
+    case vl::debug:
         return LL_DEBUG;
-    case Ut::ll::info:
+    case vl::info:
         return LL_INFO;
-    case Ut::ll::warning:
+    case vl::warning:
         return LL_WARNING;
-    case Ut::ll::error:
+    case vl::error:
         return LL_ERROR;
-    case Ut::ll::critical:
+    case vl::critical:
         return LL_CRITICAL;
     default:
         assert(0);
@@ -100,17 +104,17 @@ const char* getLogLevel(Ut::ll::LogLevel l)
 
 namespace
 {
-    bool is_set(unsigned int options, Ut::lo::LogOpts opt)
+    bool is_set(unsigned int options, vl::LogOpts opt)
     {
         return (options & opt) == static_cast<unsigned int>(opt);
     }
 
-    void set(unsigned int& options, Ut::lo::LogOpts opt)
+    void set(unsigned int& options, vl::LogOpts opt)
     {
         options |= opt;
     }
 
-    void unset(unsigned int& options, Ut::lo::LogOpts opt)
+    void unset(unsigned int& options, vl::LogOpts opt)
     {
         options &= ~opt;
     }
@@ -118,16 +122,16 @@ namespace
 
 
 
-struct Ut::Logger::Impl
+struct vl::Logger::Impl
 {
     Impl(const std::string& name) :
         name         (name),
         streams      (),
         mutex        (new std::mutex),
-        cout_level   (ll::nologging),
-        cerr_level   (ll::nologging),
-        streams_level(ll::nologging),
-        options      (lo::usual)
+        cout_level   (nologging),
+        cerr_level   (nologging),
+        streams_level(nologging),
+        options      (usual)
     { }
 
     // reference counting is atomic, so no need to lock in copy constructors
@@ -137,61 +141,67 @@ struct Ut::Logger::Impl
     std::string                    name;
     std::vector<ostream_sptr>      streams;
     mutex_sptr                     mutex;
-    ll::LogLevel                   cout_level;
-    ll::LogLevel                   cerr_level;
-    ll::LogLevel                   streams_level;
+    LogLevel                   cout_level;
+    LogLevel                   cerr_level;
+    LogLevel                   streams_level;
     unsigned int                   options;  // LogOpts flags
 };
 
 
-Ut::Logger::Logger(const std::string& name)
+vl::Logger::Logger(const std::string& name)
     : pimpl_(new Impl(name))
 {
 }
 
-Ut::Logger::~Logger()
+vl::Logger::~Logger()
 {
     delete pimpl_;
 }
 
-Ut::Logger::Logger(const Logger& other)
+vl::Logger::Logger(const Logger& other)
     : pimpl_(new Impl(*other.pimpl_))
 {
 }
 
-Ut::Logger& Ut::Logger::operator=(Logger other)
+vl::Logger& vl::Logger::operator=(Logger other)
 {
     swap(other);
     return *this;
 }
 
-void Ut::Logger::swap(Logger& other)
+void vl::Logger::swap(Logger& other)
 {
     std::swap(pimpl_, other.pimpl_);
 }
 
 
-void Ut::Logger::set_cout(ll::LogLevel reporting_level)
+std::string vl::Logger::name() const
+{
+    return pimpl_->name;
+}
+
+
+void vl::Logger::set_cout(LogLevel reporting_level)
 {
     pimpl_->cout_level = reporting_level;
 }
 
-void Ut::Logger::set_cerr(ll::LogLevel reporting_level)
+void vl::Logger::set_cerr(LogLevel reporting_level)
 {
     pimpl_->cerr_level = reporting_level;
 }
 
-bool Ut::Logger::add_stream(std::ostream* stream, ll::LogLevel reporting_level)
+bool vl::Logger::add_stream(std::ostream* stream, LogLevel reporting_level)
 {
-    assert(stream != nullptr && reporting_level != ll::nologging);
+    assert(stream != nullptr && reporting_level != nologging);
     pimpl_->streams.push_back(std::shared_ptr<std::ostream>(stream));
     pimpl_->streams_level = reporting_level;
     return true;
 }
 
-bool Ut::Logger::add_stream(const std::string& filename, ll::LogLevel reporting_level)
+bool vl::Logger::add_stream(const std::string& filename, LogLevel reporting_level)
 {
-    assert(!filename.empty() && reporting_level != ll::nologging);
+    assert(!filename.empty() && reporting_level != nologging);
 
     if (!filename.empty())
     {
@@ -216,61 +226,61 @@ bool Ut::Logger::add_stream(const std::string& filename, ll::LogLevel reporting_
 }
 
 
-void Ut::Logger::clear_streams()
+void vl::Logger::clear_streams()
 {
     pimpl_->streams.clear();
 }
 
 
-void Ut::Logger::set(lo::LogOpts opt)
+void vl::Logger::set(LogOpts opt)
 {
     ::set(pimpl_->options, opt);
 }
 
-void Ut::Logger::unset(lo::LogOpts opt)
+void vl::Logger::unset(LogOpts opt)
 {
     ::unset(pimpl_->options, opt);
 }
 
-void Ut::Logger::reset()
+void vl::Logger::reset()
 {
-    pimpl_->options = lo::usual;
+    pimpl_->options = usual;
 }
 
 
-Ut::detail_::LogWorker Ut::Logger::log(ll::LogLevel level)
+vl::detail_::LogWorker vl::Logger::log(LogLevel level)
 {
-    assert(level != ll::nologging);
+    assert(level != nologging);
     return detail_::LogWorker(this, level);
 }
-Ut::detail_::LogWorker Ut::Logger::debug()   { return log(ll::debug); }
-Ut::detail_::LogWorker Ut::Logger::info()    { return log(ll::info); }
-Ut::detail_::LogWorker Ut::Logger::warning() { return log(ll::warning); }
-Ut::detail_::LogWorker Ut::Logger::error()   { return log(ll::error); }
-Ut::detail_::LogWorker Ut::Logger::critical(){ return log(ll::critical); }
+vl::detail_::LogWorker vl::Logger::debug()   { return log(vl::debug); }
+vl::detail_::LogWorker vl::Logger::info()    { return log(vl::info); }
+vl::detail_::LogWorker vl::Logger::warning() { return log(vl::warning); }
+vl::detail_::LogWorker vl::Logger::error()   { return log(vl::error); }
+vl::detail_::LogWorker vl::Logger::critical(){ return log(vl::critical); }
 
 
-void Ut::Logger::add_prelude(std::string& out, ll::LogLevel level)
+void vl::Logger::add_prelude(std::string& out, LogLevel level)
 {
-    if (!is_set(pimpl_->options, lo::notimestamp))
+    if (!is_set(pimpl_->options, notimestamp))
         safe_sprintf(out, "{0} ", createTimestamp());
-    if (!is_set(pimpl_->options, lo::nologgername))
+    if (!is_set(pimpl_->options, nologgername))
         safe_sprintf(out, "[{0}] ", pimpl_->name);
-    if (!is_set(pimpl_->options, lo::nothreadid))
+    if (!is_set(pimpl_->options, nothreadid))
         safe_sprintf(out, "0x{0:x} ", std::this_thread::get_id());
-    if (!is_set(pimpl_->options, lo::nologlevel))
+    if (!is_set(pimpl_->options, nologlevel))
         safe_sprintf(out, "<{0}> ", getLogLevel(level));
 }
 
 
-void Ut::Logger::add_epilog(std::string& out, ll::LogLevel /*level*/)
+void vl::Logger::add_epilog(std::string& out, LogLevel /*level*/)
 {
-    if (!is_set(pimpl_->options, lo::noendl))
+    if (!is_set(pimpl_->options, noendl))
         out.push_back('\n');
 }
 
 
-void Ut::Logger::write_to_streams(ll::LogLevel level, const std::string& msg)
+void vl::Logger::write_to_streams(LogLevel level, const std::string& msg)
 {
     if (level >= pimpl_->cout_level)
     {
@@ -295,64 +305,52 @@ void Ut::Logger::write_to_streams(ll::LogLevel level, const std::string& msg)
 }
 
 
-void Ut::quote(detail_::LogWorker& log_worker)
+void vl::quote(detail_::LogWorker& log_worker)
 {
     log_worker.quote_ = true;
 }
 
 
-Ut::Logger Ut::get_logger(const std::string& name)
+vl::Logger vl::get_logger(const std::string& name)
 {
-    if (!LogManager::self_valid_)
+    if (!LogManager::self_)
     {
-        throw std::runtime_error("Trying to get logger after LogManager destruction");
+        throw std::runtime_error("Trying to get logger without valid LogManager");
     }
 
-    std::lock_guard<std::mutex> lock(LogManager::self_.lock_);
+    std::lock_guard<std::mutex> lock(LogManager::self_->lock_);
 
-    auto it = LogManager::self_.loggers_.find(name);
-    if (it != LogManager::self_.loggers_.end())
+    auto it = LogManager::self_->loggers_.find(name);
+    if (it != LogManager::self_->loggers_.end())
         return it->second;
 
-    auto pair = LogManager::self_.loggers_.insert(std::make_pair(name, Logger::cout(name)));
+    auto pair = LogManager::self_->loggers_.insert(std::make_pair(name, Logger::cout(name)));
     return pair.first->second;
 }
 
 
-void Ut::set_logger(const std::string& name, const Logger& logger)
+void vl::set_logger(const Logger& logger)
 {
-    if (!LogManager::self_valid_)
+    if (!LogManager::self_)
     {
-        throw std::runtime_error("Trying to get logger after LogManager destruction");
+        throw std::runtime_error("Trying to set logger without valid LogManager");
     }
 
-    std::lock_guard<std::mutex> lock(LogManager::self_.lock_);
+    std::lock_guard<std::mutex> lock(LogManager::self_->lock_);
 
-    auto it = LogManager::self_.loggers_.find(name);
-    if (it != LogManager::self_.loggers_.end())
+    auto it = LogManager::self_->loggers_.find(logger.name());
+    if (it != LogManager::self_->loggers_.end())
     {
         it->second = logger;
     }
     else
     {
-        LogManager::self_.loggers_.insert(std::make_pair(name, logger));
+        LogManager::self_->loggers_.insert(std::make_pair(logger.name(), logger));
     }
 }
 
 
-Ut::LogManager::LogManager()
-{
-    self_valid_ = true;
-}
-
-
-Ut::LogManager::~LogManager()
-{
-    self_valid_ = false;
-}
-
-
-Ut::detail_::LogWorker::LogWorker(Logger* logger, ll::LogLevel level)
+vl::detail_::LogWorker::LogWorker(Logger* logger, LogLevel level)
     : logger_(logger)
     , msg_level_(level)
     , msg_stream_()
@@ -365,7 +363,7 @@ Ut::detail_::LogWorker::LogWorker(Logger* logger, ll::LogLevel level)
 }
 
 
-Ut::detail_::LogWorker::~LogWorker()
+vl::detail_::LogWorker::~LogWorker()
 {
     assert(logger_);
     std::string out(msg_stream_.str());
@@ -374,7 +372,7 @@ Ut::detail_::LogWorker::~LogWorker()
 }
 
 
-Ut::detail_::LogWorker::LogWorker(LogWorker&& other)
+vl::detail_::LogWorker::LogWorker(LogWorker&& other)
     : logger_(other.logger_)
     , msg_level_(other.msg_level_)
     , msg_stream_()
@@ -388,9 +386,9 @@ Ut::detail_::LogWorker::LogWorker(LogWorker&& other)
 }
 
 
-void Ut::detail_::LogWorker::optionally_add_space()
+void vl::detail_::LogWorker::optionally_add_space()
 {
-    if (!(options_ & lo::nospace))
+    if (!(options_ & nospace))
         msg_stream_ << " ";
 }
 

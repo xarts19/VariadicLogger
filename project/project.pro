@@ -1,7 +1,7 @@
 TEMPLATE = lib
 CONFIG -= qt
 CONFIG += staticlib
-TARGET = ../VTLogger
+TARGET = ../VariadicLogger
 
 !win32 {
     QMAKE_CXXFLAGS += -std=c++0x
@@ -23,8 +23,8 @@ else {
 
 # Input
 HEADERS += \
-    ../include/VTLogger/SafeSprintf.h \
-    ../include/VTLogger/Logger.h
+    ../include/VariadicLogger/SafeSprintf.h \
+    ../include/VariadicLogger/Logger.h
 
 SOURCES += \
     ../src/SafeSprintf.cpp \

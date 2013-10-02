@@ -1,7 +1,7 @@
 #pragma once
 
 /*
- * Exports "Ut::safe_sprintf" function.
+ * Exports "vl::safe_sprintf" function.
  *
  * Formatting (moddeled after Python's str.format() function)
  * ==========================================================
@@ -26,12 +26,17 @@
  *
  */
 
+// No variadic templates before Visual Studio 2013
+#if (!defined(_MSC_VER) || _MSC_VER >= 1800)
+    #define VL_VARIADIC_TEMPLATES_SUPPORTED
+#endif
+
 #include <string>
 #include <sstream>
 #include <vector>
 #include <type_traits>
 
-namespace Ut
+namespace vl
 {
     namespace d_
     {
@@ -113,8 +118,7 @@ namespace Ut
             return Substring(SubstrText, oss.str());
         }
 
-// No variadic templates in Visual Studio 2012
-#ifndef _MSC_VER
+#ifdef VL_VARIADIC_TEMPLATES_SUPPORTED
 
         // base case for variadic template handling recursion
         inline void safe_sprintf_worker(int /*index*/, Split& /*fmt*/) {}
@@ -167,12 +171,11 @@ namespace Ut
 #endif
     }
 
+#ifdef VL_VARIADIC_TEMPLATES_SUPPORTED
+
     /*
      * Appends string formatted according to [fmt] and specified arguments [args] to [out] string.
      */
-// No variadic templates in Visual Studio 2012
-#ifndef _MSC_VER
-
     template <typename... Args>
     void safe_sprintf(std::string& out, const std::string& fmt, Args&&... args)
     {

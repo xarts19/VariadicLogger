@@ -1,4 +1,4 @@
-#include "VTLogger/SafeSprintf.h"
+#include "VariadicLogger/SafeSprintf.h"
 
 #include <stdexcept>
 #include <assert.h>
@@ -6,7 +6,7 @@
 #include <iomanip>
 
 
-Ut::d_::Split Ut::d_::split_format(const std::string& fmt)
+vl::d_::Split vl::d_::split_format(const std::string& fmt)
 {
     Split result;
     size_t start = 0;
@@ -70,7 +70,7 @@ Ut::d_::Split Ut::d_::split_format(const std::string& fmt)
 }
 
 
-void Ut::d_::join(std::string& out, const Split& split)
+void vl::d_::join(std::string& out, const Split& split)
 {
     for (const Substring& chunk : split)
     {
@@ -86,7 +86,7 @@ void Ut::d_::join(std::string& out, const Split& split)
 }
 
 
-bool Ut::d_::has_index(const std::string& substr, int index)
+bool vl::d_::has_index(const std::string& substr, int index)
 {
     size_t pos = substr.find_first_of(":");
 
@@ -127,7 +127,7 @@ namespace
         int precision;
         char type;
 
-        explicit Format(Ut::d_::ValueType vtype)
+        explicit Format(vl::d_::ValueType vtype)
             : fill(' ')
             , align(A_Left)
             , sign(S_Negative)
@@ -139,16 +139,16 @@ namespace
         {
             switch (vtype)
             {
-            case Ut::d_::VT_Integral:
+            case vl::d_::VT_Integral:
                 type = 'd';
                 align = A_Right;
                 break;
-            case Ut::d_::VT_Floating:
+            case vl::d_::VT_Floating:
                 type = 'g';
                 precision = 6;
                 align = A_Right;
                 break;
-            case Ut::d_::VT_Other:
+            case vl::d_::VT_Other:
                 // already set
                 break;
             default:
@@ -200,7 +200,7 @@ namespace
         return false;
     }
 
-    Format parse_format(const std::string& format, Ut::d_::ValueType type)
+    Format parse_format(const std::string& format, vl::d_::ValueType type)
     {
         /*
          * format_spec ::=  [[fill]align][sign][#][0][width][,][.precision][type]
@@ -300,7 +300,7 @@ namespace
             if (!isdigit(format[index+1]))
                 throw std::runtime_error("Precision not specified after '.'");
 
-            if (type == Ut::d_::VT_Integral)
+            if (type == vl::d_::VT_Integral)
                 throw std::runtime_error("Precision is not allowed for integral types");
 
             ++index;  // skip the dot
@@ -328,7 +328,7 @@ namespace
     }
 }
 
-void Ut::d_::modify_stream(std::ostringstream& oss, const std::string& format, ValueType type)
+void vl::d_::modify_stream(std::ostringstream& oss, const std::string& format, ValueType type)
 {
     Format f = parse_format(format, type);
 
