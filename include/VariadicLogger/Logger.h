@@ -1,3 +1,10 @@
+/*
+ *  Copyright (c) 2013, Turinskyi Vitalii
+ *  All rights reserved.
+ *
+ *  Distributed under the Boost Software License, Version 1.0. (See accompanying
+ *  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+ */
 #pragma once
 
 #include "VariadicLogger/SafeSprintf.h"
@@ -8,44 +15,6 @@
 #include <sstream>
 #include <assert.h>
 
-// TODO:
-//   * implement coloring (separate implementations for each platform)
-//   * add custom timestamp formatting
-/*
-    vl::Logger is typedef for vl::LoggerT<vl::delegate> - delegates writing of messages to LogManager's worker thread
-    vl::ImLogger is typedef for vl::LoggerT<vl::immediate> - writes log messages in current thread
-
-    Example:
-        First, you need to create LogManager in main() function:
-            LogManager log_manager;
-        Then you can call get_logger() and set_logger() to retrieve and store loggers in log manager.
-
-        LogManager not only provides a storage for your loggers, but also a separate thread
-        for writing log messages to streams so to not block execution on long locked writes to disk.
-
-        You can create a logger like this:
-            Logger logger("default");
-            logger.set_cout();
-            logger.add_stream("logfile.log");
-
-        And use it like this:
-            logger.log(debug, "{0} {1}", "Hello", "world!");
-            logger.debug() << "Hello" << "world";
-
-        You can change logger options like this:
-            logger.set(vl::noendl);
-            logger.set(vl::nospace);
-            logger.unset(vl::nospace);
-            logger.reset();
-
-        You can store it and then retrieve it from anywhere:
-            set_logger(logger);
-            Logger l = get_logger("default");
-
-          * changes to logger are not shared between other instances of the logger, retrieved with get_logger()
-
-
-*/
 
 namespace vl
 {

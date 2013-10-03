@@ -1,3 +1,10 @@
+/*
+ *  Copyright (c) 2013, Turinskyi Vitalii
+ *  All rights reserved.
+ *
+ *  Distributed under the Boost Software License, Version 1.0. (See accompanying
+ *  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+ */
 #include "VariadicLogger/Logger.h"
 
 #include "VariadicLogger/Event.h"
@@ -158,12 +165,16 @@ void vl::LogManager::writer_loop()
 {
     Impl::queue_type tmp_queue_;
 
-    while (d->is_running_.load())
+    for (;;)
     {
         d->new_msgs_event_.wait();
 
         {
             std::lock_guard<std::mutex> lock(d->lock_);
+
+            if (!d->is_running_.load() && d->msg_queue_.empty())
+                break;
+
             tmp_queue_.swap(d->msg_queue_);
             d->new_msgs_event_.reset();
         }
