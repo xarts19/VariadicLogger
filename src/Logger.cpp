@@ -129,13 +129,14 @@ vl::LogManager::LogManager()
 
 vl::LogManager::~LogManager()
 {
-    d->is_running_.store(false);
-    d->new_msgs_event_.signal();
+    self_ = nullptr;  // prevents queueing new messages
+
+    d->is_running_.store(false);  // ensures that loop is not entered again
+    d->new_msgs_event_.signal();  // unblocks the loop and signals to process any left messages
 
     if (d->writer_thread_.joinable())
         d->writer_thread_.join();
 
-    self_ = nullptr;
     delete d;
 }
 
@@ -157,12 +158,9 @@ void vl::LogManager::writer_loop()
 {
     Impl::queue_type tmp_queue_;
 
-    for (;;)
+    while (d->is_running_.load())
     {
         d->new_msgs_event_.wait();
-
-        if (!d->is_running_.load())
-            break;
 
         {
             std::lock_guard<std::mutex> lock(d->lock_);

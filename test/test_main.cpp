@@ -209,6 +209,35 @@ TEST_CASE ( "File logging" )
 }
 
 
+TEST_CASE( "deffered logging" )
+{
+    for (int j = 0; j < 10; ++j)  // repeat 10 times because of undeterministic behaviour
+    {
+        auto lm = std::unique_ptr<vl::LogManager>(new vl::LogManager);
+
+        vl::Logger l("default");
+        l.set(vl::notimestamp);
+        l.set(vl::nothreadid);
+        l.set(vl::nologgername);
+        l.set(vl::nologlevel);
+        l.set(vl::noendl);
+        l.set(vl::nospace);
+
+        std::stringstream* output = new std::stringstream;
+        l.add_stream(output, vl::debug);
+
+        for (int i = 0; i < 10000; ++i)
+        {
+            l.debug() << "0";
+        }
+
+        lm = nullptr;
+
+        REQUIRE(output->str().size() == 10000);
+    }
+}
+
+
 TEST_CASE( "safe_sprintf hex formatting")
 {
     std::string out;
@@ -248,8 +277,10 @@ TEST_CASE( "safe_sprintf oct formatting")
 }
 
 
+// TODO: check other formatting options
+
+
 int main(int argc, char* argv[])
 {
-    vl::LogManager lm;
     return Catch::Session().run(argc, argv);
 }
