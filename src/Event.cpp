@@ -22,6 +22,8 @@ void vl::Event::signal()
     if (is_signaled_)
         return;
 
+    std::lock_guard<std::mutex> lk(lock_);
+
     if (!autoreset_)
         is_signaled_ = true;
 
@@ -38,6 +40,9 @@ bool vl::Event::wait(int timeout_ms)
     assert( timeout_ms >= -1 && "Incorrect timeout value" );
     
     std::unique_lock<std::mutex> lk(lock_);
+
+    if (is_signaled_)
+        return true;
 
     if (timeout_ms != -1)
     {

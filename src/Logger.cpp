@@ -167,7 +167,8 @@ void vl::LogManager::writer_loop()
 
     for (;;)
     {
-        d->new_msgs_event_.wait();
+        if (d->is_running_.load())
+            d->new_msgs_event_.wait(1000);
 
         {
             std::lock_guard<std::mutex> lock(d->lock_);

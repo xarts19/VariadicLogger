@@ -230,16 +230,16 @@ namespace
 
         // [[fill]align]
 
-        if (char_in_set(format[index], aligns))
-        {
-            f.align = Format::align_from_char(format[index]);
-            ++index;
-        }
-        else if (char_in_set(format[index+1], aligns))
+        if (index+1 < static_cast<int>(format.size()) && char_in_set(format[index+1], aligns))
         {
             f.align = Format::align_from_char(format[index+1]);
             f.fill = format[index];
             index += 2;
+        }
+        else if (char_in_set(format[index], aligns))
+        {
+            f.align = Format::align_from_char(format[index]);
+            ++index;
         }
 
         if (index == static_cast<int>(format.size()))
@@ -427,6 +427,7 @@ void vl::d_::modify_stream(std::ostringstream& oss, const std::string& format, V
 
         // only has meaning if width is specified
         oss << std::setfill(f.fill);
+
         switch (f.align)
         {
         case A_Left:

@@ -284,7 +284,26 @@ TEST_CASE( "safe_sprintf oct formatting")
 }
 
 
-// TODO: check other formatting options
+TEST_CASE( "safe_sprintf fill + align")
+{
+    std::string out;
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:#<5}", 42);
+    CHECK( out == "42###" );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:=>5}", 42);
+    CHECK( out == "===42" );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:*=5}", -42);
+    CHECK( out == "-**42" );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:<5}", 42);
+    CHECK( out == "42   " );
+}
 
 
 int main(int argc, char* argv[])
