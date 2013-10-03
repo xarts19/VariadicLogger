@@ -289,6 +289,10 @@ TEST_CASE( "safe_sprintf fill + align")
     std::string out;
 
     out.clear();
+    vl::safe_sprintf(out, "{0:5}", 42);
+    CHECK( out == "   42" );
+
+    out.clear();
     vl::safe_sprintf(out, "{0:#<5}", 42);
     CHECK( out == "42###" );
 
@@ -303,6 +307,96 @@ TEST_CASE( "safe_sprintf fill + align")
     out.clear();
     vl::safe_sprintf(out, "{0:<5}", 42);
     CHECK( out == "42   " );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:5}", "ab");
+    CHECK( out == "ab   " );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:>5}", "ab");
+    CHECK( out == "   ab" );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:<5}", "ab");
+    CHECK( out == "ab   " );
+}
+
+
+TEST_CASE( "safe_sprintf sign")
+{
+    std::string out;
+
+    out.clear();
+    vl::safe_sprintf(out, "{0} {1}", 42, -42);
+    CHECK( out == "42 -42" );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:+} {1:+}", 42, -42);
+    CHECK( out == "+42 -42" );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:-} {1:-}", 42, -42);
+    CHECK( out == "42 -42" );
+}
+
+
+TEST_CASE( "safe_sprintf float formatting and precision")
+{
+    std::string out;
+
+    // general
+
+    out.clear();
+    vl::safe_sprintf(out, "{0}", 42.0);
+    CHECK( out == "42" );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:g}", 42.125);
+    CHECK( out == "42.125" );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:g}", 42.123456789);
+    CHECK( out == "42.1235" );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:g}", 6.1234567e17);
+    CHECK( out == "6.12346e+17" );
+
+    // fixed
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:f}", 42.0);
+    CHECK( out == "42.000000" );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:f}", 42.125);
+    CHECK( out == "42.125000" );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:f}", 42.123456789);
+    CHECK( out == "42.123457" );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:f}", 6.1234567e17);
+    CHECK( out == "612345670000000000.000000" );
+
+    // scientific
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:E}", 42.0);
+    CHECK( out == "4.200000E+01" );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:e}", 42.125);
+    CHECK( out == "4.212500e+01" );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:e}", 42.123456789);
+    CHECK( out == "4.212346e+01" );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:e}", 6.1234567e17);
+    CHECK( out == "6.123457e+17" );
 }
 
 

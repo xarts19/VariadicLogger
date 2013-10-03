@@ -152,7 +152,6 @@ namespace
                 break;
             case vl::d_::VT_Floating:
                 type = 'g';
-                precision = 6;
                 align = A_Right;
                 break;
             case vl::d_::VT_Other:
@@ -384,7 +383,6 @@ void vl::d_::modify_stream(std::ostringstream& oss, const std::string& format, V
     case 'G':
     case 'g':
         // default
-        oss << std::showpoint;
         break;
 
     case '%':
