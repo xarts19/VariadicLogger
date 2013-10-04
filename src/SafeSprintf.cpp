@@ -215,12 +215,15 @@ namespace
          * sign        ::=  "+" | "-" | " "
          * width       ::=  integer
          * precision   ::=  integer
-         * type        ::=  "b" | "c" | "d" | "e" | "E" | "f" | "F" | "g" | "G" | "n" | "o" | "s" | "x" | "X" | "%"
+         * type        ::=  "b" | "d" | "e" | "E" | "f" | "F" | "g" | "G" | "o" | "s" | "x" | "X" | "%"
          */
 
         char aligns[] = "><=^";
         char signs[] = "+- ";
-        char types[] = "bcdeEfFgGnosxX%";
+        char types[] = "sbdoxXeEfFgG%";
+        char int_types[] = "bdoxX";
+        char float_types[] = "eEfFgG%";
+        char other_types[] = "s";
         int index = 0;
         Format f(type);
 
@@ -324,6 +327,16 @@ namespace
         if (char_in_set(format[index], types))
         {
             f.type = format[index];
+
+            if (type == vl::d_::VT_Other && !char_in_set(f.type, other_types))
+                throw std::runtime_error("Incorrect format for non-number type");
+
+            if (type == vl::d_::VT_Integral && !char_in_set(f.type, int_types))
+                throw std::runtime_error("Incorrect format for integral type");
+
+            if (type == vl::d_::VT_Floating && !char_in_set(f.type, float_types))
+                throw std::runtime_error("Incorrect format for floating type");
+
             ++index;
         }
 
@@ -356,15 +369,7 @@ void vl::d_::modify_stream(std::ostringstream& oss, const std::string& format, V
         break;
 
     case 'b':
-        // not impelemented
-        break;
-
-    case 'c':
-        // not impelemented
-        break;
-
-    case 'n':
-        // not impelemented
+        // not implemented
         break;
 
     // Floating point presentation types:

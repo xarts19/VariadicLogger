@@ -7,32 +7,6 @@
  */
 #pragma once
 
-/*
- * Exports "vl::safe_sprintf" function.
- *
- * Formatting (moddeled after Python's str.format() function)
- * ==========================================================
- *  * Format string specifiec a template for resulting string, where substring of the form "{X:f}" will be
- *    substituted by provided arguments.
- *  * Doubled occurences of curly braces will be replaced by single occurence, e. g. "{{" will become "{" and
- *    "}}" will become "}" without affecting arguments substitution (use this to insert curly braces).
- *  * X : argument number for substitution starting from 0 for first provided argument
- *  * f : format specifier
- *
- *  Format mini-language
- *  --------------------
- *    format_spec ::=  [[fill]align][sign][#][0][width][,][.precision][type]
- *    fill        ::=  <a character other than '{' or '}'>
- *    align       ::=  "<" | ">" | "=" | "^"
- *    sign        ::=  "+" | "-" | " "
- *    width       ::=  integer
- *    precision   ::=  integer
- *    type        ::=  "b" | "c" | "d" | "e" | "E" | "f" | "F" | "g" | "G" | "n" | "o" | "s" | "x" | "X" | "%"
- *
- *  For more info, see http://docs.python.org/3.3/library/string.html#formatspec
- *
- */
-
 // No variadic templates before Visual Studio 2013
 #if (!defined(_MSC_VER) || _MSC_VER >= 1800)
     #define VL_VARIADIC_TEMPLATES_SUPPORTED

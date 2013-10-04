@@ -284,13 +284,17 @@ TEST_CASE( "safe_sprintf oct formatting")
 }
 
 
-TEST_CASE( "safe_sprintf fill + align")
+TEST_CASE( "safe_sprintf width + fill + align")
 {
     std::string out;
 
     out.clear();
     vl::safe_sprintf(out, "{0:5}", 42);
     CHECK( out == "   42" );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:05} {1:05}", 42, -42);
+    CHECK( out == "00042 -0042" );
 
     out.clear();
     vl::safe_sprintf(out, "{0:#<5}", 42);
@@ -360,7 +364,8 @@ TEST_CASE( "safe_sprintf float formatting and precision")
 
     out.clear();
     vl::safe_sprintf(out, "{0:g}", 6.1234567e17);
-    CHECK( out == "6.12346e+17" );
+    CAPTURE(out);
+    CHECK( bool(out == "6.12346e+17" || out == "6.12346e+017") );
 
     // fixed
 
@@ -384,19 +389,47 @@ TEST_CASE( "safe_sprintf float formatting and precision")
 
     out.clear();
     vl::safe_sprintf(out, "{0:E}", 42.0);
-    CHECK( out == "4.200000E+01" );
+    CAPTURE(out);
+    CHECK( bool(out == "4.200000E+01" || out == "4.200000E+001") );
 
     out.clear();
     vl::safe_sprintf(out, "{0:e}", 42.125);
-    CHECK( out == "4.212500e+01" );
+    CAPTURE(out);
+    CHECK( bool(out == "4.212500e+01" || out == "4.212500e+001") );
 
     out.clear();
     vl::safe_sprintf(out, "{0:e}", 42.123456789);
-    CHECK( out == "4.212346e+01" );
+    CAPTURE(out);
+    CHECK( bool(out == "4.212346e+01" || out == "4.212346e+001") );
 
     out.clear();
     vl::safe_sprintf(out, "{0:e}", 6.1234567e17);
-    CHECK( out == "6.123457e+17" );
+    CAPTURE(out);
+    CHECK( bool(out == "6.123457e+17" || out == "6.123457e+017") );
+}
+
+
+TEST_CASE( "safe_sprintf precision" )
+{
+    std::string out;
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:.5} {1:.5} {2:.5}", 42.0, 42.1234, -42.1234);
+    CHECK( out == "42 42.123 -42.123" );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:.5}", 421234.123);
+    CAPTURE(out);
+    CHECK( bool(out == "4.2123e+005" || out == "4.2123e+05") );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:.5}", -421234.123);
+    CAPTURE(out);
+    CHECK( bool(out == "-4.2123e+005" || out == "-4.2123e+05") );
+
+    out.clear();
+    vl::safe_sprintf(out, "{0:.5}", -1.123456);
+    CHECK( out == "-1.1235" );
 }
 
 

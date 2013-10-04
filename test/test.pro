@@ -35,7 +35,8 @@ CONFIG( debug, debug|release )  {
 HEADERS += \
     ../include/VariadicLogger/SafeSprintf.h \
     ../include/VariadicLogger/Logger.h \
-    ../include/VariadicLogger/Event.h
+    ../include/VariadicLogger/Event.h \
+    catch.hpp
 
 SOURCES += \
     test_main.cpp
