@@ -109,36 +109,36 @@ N. B. `vl::nologging` is only allowed for logger's log level, but not for messag
 
   * general
 ```
-     Symbol | Meaning
-    --------|-----------------------------------------------------------------
-     **s**  | string format (this is default for strings)
+       Symbol | Meaning
+      --------|-----------------------------------------------------------------
+       **s**  | string format (this is default for strings)
 ```
 
   * integers
 ```
-     Symbol | Meaning
-    --------|-----------------------------------------------------------------
-     **b**  | binary format (*not impemented yet*)
-     **d**  | decimal format (default for integers)
-     **o**  | octal format
-     **x**  | hex format (lower-case)
-     **X**  | hex format (upper-case)
+       Symbol | Meaning
+      --------|-----------------------------------------------------------------
+       **b**  | binary format (*not impemented yet*)
+       **d**  | decimal format (default for integers)
+       **o**  | octal format
+       **x**  | hex format (lower-case)
+       **X**  | hex format (upper-case)
 ```
 
   * floating-point numbers
 ```
-     Symbol | Meaning
-    --------|-----------------------------------------------------------------
-     **e**  | scientific notation
-     **E**  | scientific notation (upper-case)
-     **f**  | fixed notation
-     **F**  | fixed notation (upper-case)
-     **g**  | general format (default); if the number is small enough, fixed
-            | format is used; if the number gets too large, the output switches
-            | over to scientific format
-     **G**  | general format (upper-case)
-     **%**  | percentage, multiplies the number by 100 and displays in
-            | fixed ('f') format, followed by a percent sign
+       Symbol | Meaning
+      --------|-----------------------------------------------------------------
+       **e**  | scientific notation
+       **E**  | scientific notation (upper-case)
+       **f**  | fixed notation
+       **F**  | fixed notation (upper-case)
+       **g**  | general format (default); if the number is small enough, fixed
+              | format is used; if the number gets too large, the output switches
+              | over to scientific format
+       **G**  | general format (upper-case)
+       **%**  | percentage, multiplies the number by 100 and displays in
+              | fixed ('f') format, followed by a percent sign
 ```
 
 ##TODO:
