@@ -63,6 +63,7 @@ N. B. `vl::nologging` is only allowed for logger's log level, but not for messag
 * f : format specifier
 
 #### Format mini-language
+```
     format_spec ::=  [[fill]align][sign][#][0][width][,][.precision][type]
     fill        ::=  <a character other than '{' or '}'>
     align       ::=  "<" | ">" | "=" | "^"
@@ -71,23 +72,28 @@ N. B. `vl::nologging` is only allowed for logger's log level, but not for messag
     precision   ::=  integer
     type        ::=  "b" | "d" | "e" | "E" | "f" | "F" | "g" | "G" | "o" | "s"
                      | "x" | "X" | "%"
+```
 
 * **align**:
-    Symbol  | Meaning
+```
+     Symbol | Meaning
     --------|-----------------------------------------------------------------
     **<**   | left (default for strings)
     **>**   | right (default for numerics)
     **=**   | sign aware (sign on the left, if any, number on the right, fill
             | in the middle)
     **^**   | centered (*not impemented yet*)
+```
 
 * **sign**:
-    Symbol  | Meaning
+```
+     Symbol | Meaning
     --------|-----------------------------------------------------------------
     **+**   | show sign for both positive and negative numbers
     **-**   | show sign only for negative numbers
     ** **   | show sign for negative and space for positive
             | (*not implemented yet*)
+```
 
 * **#** is only valid for integers and only for binary, octal of hex output. It specifies that the output will be prefixed by base ('0b', '0', '0x')
 
@@ -102,21 +108,26 @@ N. B. `vl::nologging` is only allowed for logger's log level, but not for messag
 * **type**
 
   * general
-    Symbol  | Meaning
+```
+     Symbol | Meaning
     --------|-----------------------------------------------------------------
     **s**   | string format (this is default for strings)
+```
 
   * integers
-    Symbol  | Meaning
+```
+     Symbol | Meaning
     --------|-----------------------------------------------------------------
     **b**   | binary format (*not impemented yet*)
     **d**   | decimal format (default for integers)
     **o**   | octal format
     **x**   | hex format (lower-case)
     **X**   | hex format (upper-case)
+```
 
   * floating-point numbers
-    Symbol  | Meaning
+```
+     Symbol | Meaning
     --------|-----------------------------------------------------------------
     **e**   | scientific notation
     **E**   | scientific notation (upper-case)
@@ -128,6 +139,7 @@ N. B. `vl::nologging` is only allowed for logger's log level, but not for messag
     **G**   | general format (upper-case)
     **%**   | percentage, multiplies the number by 100 and displays in
             | fixed ('f') format, followed by a percent sign
+```
 
 ##TODO:
 
