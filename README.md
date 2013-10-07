@@ -105,7 +105,7 @@ Symbol| Meaning
 
 ** integers
 Symbol| Meaning
-:----:|----------
+------|----------
 **b** | binary format (*not impemented yet*)
 **d** | decimal format (default for integers)
 **o** | octal format
