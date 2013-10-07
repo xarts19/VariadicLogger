@@ -73,7 +73,7 @@ N. B. `vl::nologging` is only allowed for logger's log level, but not for messag
                      | "x" | "X" | "%"
 
 * **align**:
-     Symbol | Meaning
+    Symbol  | Meaning
     --------|-----------------------------------------------------------------
     **<**   | left (default for strings)
     **>**   | right (default for numerics)
@@ -82,7 +82,7 @@ N. B. `vl::nologging` is only allowed for logger's log level, but not for messag
     **^**   | centered (*not impemented yet*)
 
 * **sign**:
-     Symbol | Meaning
+    Symbol  | Meaning
     --------|-----------------------------------------------------------------
     **+**   | show sign for both positive and negative numbers
     **-**   | show sign only for negative numbers
@@ -102,12 +102,12 @@ N. B. `vl::nologging` is only allowed for logger's log level, but not for messag
 * **type**
 
   * general
-     Symbol | Meaning
+    Symbol  | Meaning
     --------|-----------------------------------------------------------------
     **s**   | string format (this is default for strings)
 
   * integers
-     Symbol | Meaning
+    Symbol  | Meaning
     --------|-----------------------------------------------------------------
     **b**   | binary format (*not impemented yet*)
     **d**   | decimal format (default for integers)
@@ -116,7 +116,7 @@ N. B. `vl::nologging` is only allowed for logger's log level, but not for messag
     **X**   | hex format (upper-case)
 
   * floating-point numbers
-     Symbol | Meaning
+    Symbol  | Meaning
     --------|-----------------------------------------------------------------
     **e**   | scientific notation
     **E**   | scientific notation (upper-case)
