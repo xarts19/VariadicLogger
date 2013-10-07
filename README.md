@@ -1,4 +1,4 @@
-# VTLogger
+# VariadicLogger
 
 C++11 logger with type safe printf-like functions that use Python's format() function's format string mini-language.
 
