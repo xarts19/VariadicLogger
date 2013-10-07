@@ -1,6 +1,6 @@
 # VTLogger
 
-C++11 logger with type safe printf-like functions that use Python's format() funtion's format string mini-language.
+C++11 logger with type safe printf-like functions that use Python's format() function's format string mini-language.
 
 ## Types
 `typedef vl::LoggerT<vl::delegate> vl::Logger` - delegates writing of messages to LogManager's worker thread
@@ -12,8 +12,8 @@ If you want to use `vl::Logger` class or `vl::get_logger()` and `vl::set_logger(
     vl::LogManager log_manager;
 
 It will be destroyed cleanly at the end of main. Beware, however, that in this case you can't use logging in constructors or destructors of static objects, because they run either before or after `main()`.
-`vl::set_logger()` function stores the logger in `vl::LogManager`'s interal map. If a logger with the same name is already stored there, it is overwritten. `vl::get_logger()` retrieves the logger by name. Changes to retrieved instances of loggers do not propagate to other instances, retreived in another place. This functions are thread-safe.
-`vl::LogManager` also provides a thread for writing log messages that `vl::Logger` uses. Thread is created in `vl::LogManager`'s constructor and joined in it's destructor. Destructor block until all messages have been writted.
+`vl::set_logger()` function stores the logger in `vl::LogManager`'s internal map. If a logger with the same name is already stored there, it is overwritten. `vl::get_logger()` retrieves the logger by name. Changes to retrieved instances of loggers do not propagate to other instances, retrieved in another place. This functions are thread-safe.
+`vl::LogManager` also provides a thread for writing log messages that `vl::Logger` uses. Thread is created in `vl::LogManager`'s constructor and joined in it's destructor. Destructor blocks until all messages have been written.
 
 Creating and using a logger:
 
@@ -41,7 +41,7 @@ Changing options:
 * `vl::nologging`
 
 Priority grows from top to bottom. If message's log level is greater or equal to logger's log level, it gets printed. E. g. `logger.warning() << "Some warning.";` when `logger`'s log level is `vl::info`.
-N. B. `vl::nologging` is only allowed for logger's log level, but not for message's. Such loggers do not pring anything.
+N. B. `vl::nologging` is only allowed for logger's log level, but not for message's. Such loggers do not print anything.
 
 ### Options (`vl::LogOpts`)
 
@@ -54,10 +54,10 @@ N. B. `vl::nologging` is only allowed for logger's log level, but not for messag
 * `vl::nothreadid`      don't write thread id before each message
 * `vl::nospace`         don't insert spaces between arguments to `operator <<`
 
-### Formatting for `vl::safe_sprintf()` function (moddeled after Python's `str.format()` function)
-* Format string specifiec a template for resulting string, where substring of the form "{X:f}" will be
+### Formatting for `vl::safe_sprintf()` function (modelled after Python's `str.format()` function)
+* Format string specifies a template for resulting string, where substring of the form "{X:f}" will be
   substituted by provided arguments.
-* Doubled occurences of curly braces will be replaced by single occurence, e. g. "{{" will become "{" and
+* Doubled occurrences of curly braces will be replaced by single occurrence, e. g. "{{" will become "{" and
   "}}" will become "}" without affecting arguments substitution (use this to insert curly braces).
 * X : argument number for substitution starting from 0 for first provided argument
 * f : format specifier
@@ -84,7 +84,7 @@ type        ::=  "b" | "d" | "e" | "E" | "f" | "F" | "g" | "G" | "o" | "s"
      **>**  | right (default for numerics)
      **=**  | sign aware (sign on the left, if any, number on the right, fill
             | in the middle)
-     **^**  | centered (*not impemented yet*)
+     **^**  | centered (*not implemented yet*)
     ```
 
 * **sign**:
@@ -123,7 +123,7 @@ type        ::=  "b" | "d" | "e" | "E" | "f" | "F" | "g" | "G" | "o" | "s"
         ```
          Symbol | Meaning
         --------|-----------------------------------------------------------------
-         **b**  | binary format (*not impemented yet*)
+         **b**  | binary format (*not implemented yet*)
          **d**  | decimal format (default for integers)
          **o**  | octal format
          **x**  | hex format (lower-case)
