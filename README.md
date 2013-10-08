@@ -3,10 +3,12 @@
 C++11 logger with type safe printf-like functions that use Python's format() function's format string mini-language.
 
 ## Types
-`typedef vl::LoggerT<vl::delegate> vl::Logger` - delegates writing of messages to LogManager's worker thread
-`typedef vl::LoggerT<vl::immediate> vl::ImLogger` - writes log messages in current thread
+
+* `typedef vl::LoggerT<vl::delegate> vl::Logger` - delegates writing of messages to LogManager's worker thread
+* `typedef vl::LoggerT<vl::immediate> vl::ImLogger` - writes log messages in current thread
 
 ## Tutorial
+
 If you want to use `vl::Logger` class or `vl::get_logger()` and `vl::set_logger()` functions, you need to create `vl::LogManager` that will exist for the duration of any output `vl::Logger` operations or `vl::get_logger()` and `vl::set_logger()` calls. Easiest way to do this is to create an instance of `vl::LogManager` on the stack at the begging of `main()`.
 
     vl::LogManager log_manager;
@@ -55,6 +57,7 @@ N. B. `vl::nologging` is only allowed for logger's log level, but not for messag
 * `vl::nospace`         don't insert spaces between arguments to `operator <<`
 
 ### Formatting for `vl::safe_sprintf()` function (modelled after Python's `str.format()` function)
+
 * Format string specifies a template for resulting string, where substring of the form "{X:f}" will be
   substituted by provided arguments.
 * Doubled occurrences of curly braces will be replaced by single occurrence, e. g. "{{" will become "{" and
