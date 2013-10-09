@@ -166,7 +166,7 @@ namespace vl
             }
             catch (const std::exception& ex)
             {
-                std::cerr << "Error while formatting '" + fmt + "': " + ex.what() + "\n";
+                log_error(fmt, ex.what());
             }
         }
 
@@ -215,7 +215,7 @@ namespace vl
             }
             catch (const std::exception& ex)
             {
-                std::cerr << "Error while formatting '" + fmt + "': " + ex.what() + "\n";
+                log_error(fmt, ex.what());
             }
         }
 
@@ -233,7 +233,7 @@ namespace vl
             }
             catch (const std::exception& ex)
             {
-                std::cerr << "Error while formatting '" + fmt + "': " + ex.what() + "\n";
+                log_error(fmt, ex.what());
             }
         }
 
@@ -251,7 +251,7 @@ namespace vl
             }
             catch (const std::exception& ex)
             {
-                std::cerr << "Error while formatting '" + fmt + "': " + ex.what() + "\n";
+                log_error(fmt, ex.what());
             }
         }
 
@@ -269,7 +269,7 @@ namespace vl
             }
             catch (const std::exception& ex)
             {
-                std::cerr << "Error while formatting '" + fmt + "': " + ex.what() + "\n";
+                log_error(fmt, ex.what());
             }
         }
         
@@ -284,6 +284,7 @@ namespace vl
         void add_epilog(std::string& out, LogLevel level);
 
         void write_to_streams(LogLevel level, std::string&& msg);
+        void log_error(const std::string& fmt, const char* error_msg);
 
         // private data
 

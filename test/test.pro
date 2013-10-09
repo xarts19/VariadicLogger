@@ -16,17 +16,6 @@ else:unix: LIBS += ../libVariadicLogger.a
 win32: PRE_TARGETDEPS += ../VariadicLogger.lib
 else:unix: PRE_TARGETDEPS += ../libVariadicLogger.a
 
-# The following block leaves managing debug/release configuration to
-# qt creator.
-CONFIG -= debug_and_release
-CONFIG( debug, debug|release )  {
-  CONFIG -= release
-}
-else {
-  CONFIG -= debug
-  CONFIG += release
-}
-
 CONFIG( debug, debug|release )  {
     #DEFINES += _GLIBCXX_DEBUG
 }

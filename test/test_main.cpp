@@ -433,6 +433,34 @@ TEST_CASE( "safe_sprintf precision" )
 }
 
 
+// Release tests
+#ifdef NDEBUG
+TEST_CASE( "errors while logging" )
+{
+    vl::ImLogger l("default");
+    l.set(vl::notimestamp);
+    l.set(vl::nothreadid);
+    l.set(vl::nologgername);
+    l.set(vl::nologlevel);
+
+    std::stringstream* output = new std::stringstream;
+    l.add_stream(output, vl::debug);
+
+    l.log(vl::warning, "Something {0 something", "some other string");
+
+    CHECK(output->str() == "Error while formatting 'Something {0 something': \"Error in format string: no closing curly brace.\"\n");
+}
+
+
+TEST_CASE( "safe_sprintf throws" )
+{
+    std::string out;
+
+    CHECK_THROWS_AS(vl::safe_sprintf(out, "{0", "other"), vl::format_error);
+}
+#endif
+
+
 int main(int argc, char* argv[])
 {
     return Catch::Session().run(argc, argv);

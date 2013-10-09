@@ -519,6 +519,17 @@ namespace vl
 
 
 template <typename T>
+void vl::LoggerT<T>::log_error(const std::string& fmt, const char* error_msg)
+{
+    // make sure we log it at least to cerr
+    LogLevel old_cerr = pimpl_->cerr_level;
+    pimpl_->cerr_level = vl::warning;
+    log(vl::error, "Error while formatting '{0}': \"{1}\"", fmt, error_msg);
+    pimpl_->cerr_level = old_cerr;
+}
+
+
+template <typename T>
 vl::d_::LogWorker<T>::LogWorker(LoggerT<T>* logger, LogLevel level)
     : logger_(logger)
     , msg_level_(level)
