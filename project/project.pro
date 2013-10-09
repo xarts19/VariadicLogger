@@ -14,6 +14,10 @@ CONFIG( debug, debug|release )  {
     #DEFINES += _GLIBCXX_DEBUG
 }
 
+CONFIG( release, debug|release )  {
+    DEFINES *= NDEBUG
+}
+
 # Input
 HEADERS += \
     ../include/VariadicLogger/SafeSprintf.h \
