@@ -29,9 +29,8 @@ CONFIG( debug, debug|release )  {
 HEADERS += \
     ../include/VariadicLogger/SafeSprintf.h \
     ../include/VariadicLogger/Logger.h \
-    ../include/VariadicLogger/Event.h
+    ../include/VariadicLogger/Event.hpp
 
 SOURCES += \
     ../src/SafeSprintf.cpp \
-    ../src/Logger.cpp \
-    ../src/Event.cpp
+    ../src/Logger.cpp

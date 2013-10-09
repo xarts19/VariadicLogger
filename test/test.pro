@@ -33,9 +33,6 @@ CONFIG( debug, debug|release )  {
 
 # Input
 HEADERS += \
-    ../include/VariadicLogger/SafeSprintf.h \
-    ../include/VariadicLogger/Logger.h \
-    ../include/VariadicLogger/Event.h \
     catch.hpp
 
 SOURCES += \

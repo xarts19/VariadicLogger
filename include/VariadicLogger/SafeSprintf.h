@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2013, Turinskyi Vitalii
+ *  Copyright (c) 2013, Vitalii Turinskyi
  *  All rights reserved.
  *
  *  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -19,6 +19,13 @@
 
 namespace vl
 {
+    class format_error : public std::runtime_error
+    {
+    public:
+        explicit format_error(const char* msg) : std::runtime_error(msg) {}
+        explicit format_error(const std::string& msg) : std::runtime_error(msg) {}
+    };
+
     namespace d_
     {
         enum SubstrType

@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2013, Turinskyi Vitalii
+ *  Copyright (c) 2013, Vitalii Turinskyi
  *  All rights reserved.
  *
  *  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -9,6 +9,7 @@
 
 #include "VariadicLogger/SafeSprintf.h"
 
+#include <iostream>
 #include <ostream>
 #include <string>
 #include <stdexcept>
@@ -165,7 +166,7 @@ namespace vl
             }
             catch (const std::exception& ex)
             {
-                throw std::runtime_error("Error while formatting '" + fmt + "': " + ex.what());
+                std::cerr << "Error while formatting '" + fmt + "': " + ex.what() + "\n";
             }
         }
 
@@ -214,7 +215,7 @@ namespace vl
             }
             catch (const std::exception& ex)
             {
-                throw std::runtime_error("Error while formatting '" + fmt + "': " + ex.what());
+                std::cerr << "Error while formatting '" + fmt + "': " + ex.what() + "\n";
             }
         }
 
@@ -232,7 +233,7 @@ namespace vl
             }
             catch (const std::exception& ex)
             {
-                throw std::runtime_error("Error while formatting '" + fmt + "': " + ex.what());
+                std::cerr << "Error while formatting '" + fmt + "': " + ex.what() + "\n";
             }
         }
 
@@ -250,7 +251,7 @@ namespace vl
             }
             catch (const std::exception& ex)
             {
-                throw std::runtime_error("Error while formatting '" + fmt + "': " + ex.what());
+                std::cerr << "Error while formatting '" + fmt + "': " + ex.what() + "\n";
             }
         }
 
@@ -268,7 +269,7 @@ namespace vl
             }
             catch (const std::exception& ex)
             {
-                throw std::runtime_error("Error while formatting '" + fmt + "': " + ex.what());
+                std::cerr << "Error while formatting '" + fmt + "': " + ex.what() + "\n";
             }
         }
         

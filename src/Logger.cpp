@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2013, Turinskyi Vitalii
+ *  Copyright (c) 2013, Vitalii Turinskyi
  *  All rights reserved.
  *
  *  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -7,7 +7,7 @@
  */
 #include "VariadicLogger/Logger.h"
 
-#include "VariadicLogger/Event.h"
+#include "VariadicLogger/Event.hpp"
 
 #include <thread>
 #include <memory>
@@ -168,7 +168,7 @@ void vl::LogManager::writer_loop()
     for (;;)
     {
         if (d->is_running_.load())
-            d->new_msgs_event_.wait(1000);
+            d->new_msgs_event_.wait_for(std::chrono::seconds(1));
 
         {
             std::lock_guard<std::mutex> lock(d->lock_);

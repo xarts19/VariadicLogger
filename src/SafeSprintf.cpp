@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2013, Turinskyi Vitalii
+ *  Copyright (c) 2013, Vitalii Turinskyi
  *  All rights reserved.
  *
  *  Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -56,7 +56,8 @@ vl::d_::Split vl::d_::split_format(const std::string& fmt)
 
             if (end == fmt.npos)
             {
-                throw std::runtime_error("Error in format string: no closing curly brace.");
+                assert(false && "Error in format string: no closing curly brace.");
+                throw vl::format_error("Error in format string: no closing curly brace.");
             }
             else
             {
@@ -82,7 +83,9 @@ void vl::d_::join(std::string& out, const Split& split)
     for (const Substring& chunk : split)
     {
         if (chunk.type == SubstrText)
+        {
             out.append(chunk.content);
+        }
         else
         {
             out.push_back('{');
@@ -98,9 +101,20 @@ bool vl::d_::has_index(const std::string& substr, int index)
     size_t pos = substr.find_first_of(":");
 
     if ((pos != substr.npos && pos < 1) || (pos == substr.npos && substr.size() < 1))
-        throw std::runtime_error("No position marker provided");
+    {
+        assert(false && "No position marker provided");
+        throw vl::format_error("No position marker provided");
+    }
 
-    return index == stoi(substr.substr(0, pos));
+    try
+    {
+        return index == stoi(substr.substr(0, pos));
+    }
+    catch (const std::logic_error& ex)
+    {
+        assert(false && "Error in position marker");
+        throw vl::format_error(std::string("Error in position marker: ") + ex.what());
+    }
 }
 
 
@@ -158,7 +172,8 @@ namespace
                 // already set
                 break;
             default:
-                assert(0 && "impossible");
+                assert(false && "Bad value type");
+                throw vl::format_error("Bad value type");
             }
         }
 
@@ -175,8 +190,8 @@ namespace
             case '^':
                 return A_Center;
             default:
-                assert(0 && "impossible");
-                return A_Right;
+                assert(false && "Bad align chracter");
+                throw vl::format_error(std::string("Bad align chracter: ") + ch);
             };
         }
 
@@ -191,8 +206,8 @@ namespace
             case ' ':
                 return S_Space;
             default:
-                assert(0 && "impossible");
-                return S_Negative;
+                assert(false && "Bad sign chracter");
+                throw vl::format_error(std::string("Bad sign chracter: ") + ch);
             };
         }
     };
@@ -307,15 +322,23 @@ namespace
         if (format[index] == '.')
         {
             if (!isdigit(format[index+1]))
-                throw std::runtime_error("Precision not specified after '.'");
+            {
+                assert(false && "Precision not specified after '.'");
+                throw vl::format_error("Precision not specified after '.'");
+            }
 
             if (type == vl::d_::VT_Integral)
-                throw std::runtime_error("Precision is not allowed for integral types");
+            {
+                assert(false && "Precision is not allowed for integral types");
+                throw vl::format_error("Precision is not allowed for integral types");
+            }
 
             ++index;  // skip the dot
             int count = 1;  // we already checked that first character after the dot is digit
+
             while (isdigit(format[index + count]))
                 ++count;
+
             f.precision = std::stoi(format.substr(index, count));
             index += count;
         }
@@ -329,19 +352,31 @@ namespace
             f.type = format[index];
 
             if (type == vl::d_::VT_Other && !char_in_set(f.type, other_types))
-                throw std::runtime_error("Incorrect format for non-number type");
+            {
+                assert(false && "Incorrect format for non-number type");
+                throw vl::format_error("Incorrect format for non-number type");
+            }
 
             if (type == vl::d_::VT_Integral && !char_in_set(f.type, int_types))
-                throw std::runtime_error("Incorrect format for integral type");
+            {
+                assert(false && "Incorrect format for integral type");
+                throw vl::format_error("Incorrect format for integral type");
+            }
 
             if (type == vl::d_::VT_Floating && !char_in_set(f.type, float_types))
-                throw std::runtime_error("Incorrect format for floating type");
+            {
+                assert(false && "Incorrect format for floating type");
+                throw vl::format_error("Incorrect format for floating type");
+            }
 
             ++index;
         }
 
         if (index != static_cast<int>(format.size()))
-            throw std::runtime_error("Error in format specifier: " + format);
+        {
+            assert(false && "Unknown symbols in format specifier");
+            throw vl::format_error("Unknown symbols in format specifier");
+        }
 
         return f;
     }
