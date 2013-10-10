@@ -88,7 +88,7 @@ namespace vl
         template <typename A>
         Substring format_argument(const std::string& substr, A&& arg)
         {
-            size_t pos = substr.find_first_of(":");
+            size_t pos = substr.find(':');
             std::string format;
 
             if (pos != substr.npos)

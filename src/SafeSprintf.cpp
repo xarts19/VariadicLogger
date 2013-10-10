@@ -98,7 +98,7 @@ void vl::d_::join(std::string& out, const Split& split)
 
 bool vl::d_::has_index(const std::string& substr, int index)
 {
-    size_t pos = substr.find_first_of(":");
+    size_t pos = substr.find(':');
 
     if ((pos != substr.npos && pos < 1) || (pos == substr.npos && substr.size() < 1))
     {
