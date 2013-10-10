@@ -67,7 +67,7 @@ vl::d_::Split vl::d_::split_format(const std::string& fmt)
         if (start == fmt.npos)
         {
             if (pos != fmt.npos)
-                result.push_back(Substring(SubstrText, &fmt[pos], fmt.size() - pos));
+                result.push_back(Substring(SubstrText, &fmt[pos], static_cast<int>(fmt.size() - pos)));
 
             pos = fmt.npos;
 
@@ -77,13 +77,13 @@ vl::d_::Split vl::d_::split_format(const std::string& fmt)
         {
             if (start + 1 < fmt.size() && fmt[start + 1] == '{')
             {
-                result.push_back(Substring(SubstrText, &fmt[pos], start - pos + 2));
+                result.push_back(Substring(SubstrText, &fmt[pos], static_cast<int>(start - pos + 2)));
                 pos = start + 2;
                 continue;
             }
 
             if (start != pos)
-                result.push_back(Substring(SubstrText, &fmt[pos], start - pos));
+                result.push_back(Substring(SubstrText, &fmt[pos], static_cast<int>(start - pos)));
 
             pos = start;
         }
@@ -107,7 +107,7 @@ vl::d_::Split vl::d_::split_format(const std::string& fmt)
                     continue;
                 }
 
-                result.push_back(Substring(SubstrAnchor, &fmt[start + 1], end - start - 1));
+                result.push_back(Substring(SubstrAnchor, &fmt[start + 1], static_cast<int>(end - start - 1)));
                 pos = end + 1;
                 break;
             }

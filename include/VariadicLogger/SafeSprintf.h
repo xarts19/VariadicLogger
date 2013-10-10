@@ -52,7 +52,7 @@ namespace vl
                 , content_(std::forward<T>(c))
             { }
 
-            Substring(SubstrType t, const char* str, size_t s)
+            Substring(SubstrType t, const char* str, int s)
                 : type_(t)
                 , has_string_(false)
                 , begin_(str)
@@ -120,7 +120,7 @@ namespace vl
             if (pos != format + format_size)
             {
                 format_proper = pos + 1;
-                format_proper_size = format + format_size - format_proper;
+                format_proper_size = format - format_proper + format_size;
             }
 
             std::ostringstream oss;
@@ -163,8 +163,12 @@ namespace vl
         {
             for (Substring& substr : fmt)
             {
-                if (substr.type == SubstrAnchor && has_index(substr.content, index))
-                    substr = format_argument(substr.content, std::forward<A0>(arg0));
+                if (substr.type() == SubstrAnchor)
+                {
+                    assert(!substr.has_string());
+                    if (has_index(substr.str(), substr.size(), index))
+                        substr = format_argument(substr.str(), substr.size(), std::forward<A0>(arg0));
+                }
             }
         }
 
@@ -173,8 +177,12 @@ namespace vl
         {
             for (Substring& substr : fmt)
             {
-                if (substr.type == SubstrAnchor && has_index(substr.content, index))
-                    substr = format_argument(substr.content, std::forward<A0>(arg0));
+                if (substr.type() == SubstrAnchor)
+                {
+                    assert(!substr.has_string());
+                    if (has_index(substr.str(), substr.size(), index))
+                        substr = format_argument(substr.str(), substr.size(), std::forward<A0>(arg0));
+                }
             }
             safe_sprintf_worker(index + 1, fmt, std::forward<A1>(arg1));
         }
@@ -184,8 +192,12 @@ namespace vl
         {
             for (Substring& substr : fmt)
             {
-                if (substr.type == SubstrAnchor && has_index(substr.content, index))
-                    substr = format_argument(substr.content, std::forward<A0>(arg0));
+                if (substr.type() == SubstrAnchor)
+                {
+                    assert(!substr.has_string());
+                    if (has_index(substr.str(), substr.size(), index))
+                        substr = format_argument(substr.str(), substr.size(), std::forward<A0>(arg0));
+                }
             }
             safe_sprintf_worker(index + 1, fmt, std::forward<A1>(arg1), std::forward<A2>(arg2));
         }
