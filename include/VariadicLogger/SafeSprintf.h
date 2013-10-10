@@ -17,6 +17,7 @@
 #include <vector>
 #include <type_traits>
 #include <stdexcept>
+#include <assert.h>
 
 namespace vl
 {
@@ -46,17 +47,27 @@ namespace vl
         {
             template <typename T>
             Substring(SubstrType t, T&& c)
-                : type(t)
-                , content(std::forward<T>(c))
+                : type_(t)
+                , has_string_(true)
+                , content_(std::forward<T>(c))
+            { }
+
+            Substring(SubstrType t, const char* str, size_t s)
+                : type_(t)
+                , has_string_(false)
+                , begin_(str)
+                , size_(s)
             { }
 
             Substring(const Substring& other)
-                : type(other.type)
-                , content(other.content)
+                : type_(other.type_)
+                , has_string_(other.has_string_)
+                , content_(other.content_)
+                , begin_(other.begin_)
+                , size_(other.size_)
             { }
 
             Substring(Substring&& other)
-                : content()
             {
                 swap(*this, other);
             }
@@ -70,29 +81,47 @@ namespace vl
             friend void swap(Substring& fst, Substring& snd)
             {
                 using std::swap;
-                swap(fst.type, snd.type);
-                swap(fst.content, snd.content);
+                swap(fst.type_, snd.type_);
+                swap(fst.has_string_, snd.has_string_);
+                swap(fst.content_, snd.content_);
+                swap(fst.begin_, snd.begin_);
+                swap(fst.size_, snd.size_);
             }
 
-            SubstrType type;
-            std::string content;
+            SubstrType type() const;
+            bool has_string() const;
+            const std::string& content() const;
+            const char* str() const;
+            int size() const;
+
+        private:
+            SubstrType type_;
+            bool has_string_;
+            std::string content_;
+            const char* begin_;
+            int size_;
         };
 
         typedef std::vector<Substring> Split;
 
+        const char* find_in_str(const char* b, int size, char what);
         Split split_format(const std::string& fmt);
         void join(std::string& out, const Split& split);
-        bool has_index(const std::string& substr, int index);
-        void modify_stream(std::ostringstream& oss, const std::string& format, ValueType type);
+        bool has_index(const char* substr, int substr_size, int index);
+        void modify_stream(std::ostringstream& oss, const char* format, int format_size, ValueType type);
 
         template <typename A>
-        Substring format_argument(const std::string& substr, A&& arg)
+        Substring format_argument(const char* format, int format_size, A&& arg)
         {
-            size_t pos = substr.find_first_of(":");
-            std::string format;
+            const char* pos = find_in_str(format, format_size, ':');
+            const char* format_proper = "";
+            int format_proper_size = 0;
 
-            if (pos != substr.npos)
-                format = substr.substr(pos + 1);
+            if (pos != format + format_size)
+            {
+                format_proper = pos + 1;
+                format_proper_size = format + format_size - format_proper;
+            }
 
             std::ostringstream oss;
             ValueType type = VT_Other;
@@ -102,7 +131,7 @@ namespace vl
             else if (std::is_floating_point<A>::value)
                 type = VT_Floating;
 
-            modify_stream(oss, format, type);
+            modify_stream(oss, format_proper, format_proper_size, type);
             oss << arg;
             return Substring(SubstrText, oss.str());
         }
@@ -117,8 +146,12 @@ namespace vl
         {
             for (Substring& substr : fmt)
             {
-                if (substr.type == SubstrAnchor && has_index(substr.content, index))
-                    substr = format_argument(substr.content, std::forward<A>(arg));
+                if (substr.type() == SubstrAnchor)
+                {
+                    assert(!substr.has_string());
+                    if (has_index(substr.str(), substr.size(), index))
+                        substr = format_argument(substr.str(), substr.size(), std::forward<A>(arg));
+                }
             }
             safe_sprintf_worker(index + 1, fmt, std::forward<Args>(args)...);
         }

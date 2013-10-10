@@ -8,9 +8,49 @@
 #include "VariadicLogger/SafeSprintf.h"
 
 #include <stdexcept>
+#include <algorithm>
 #include <assert.h>
 #include <ctype.h>
 #include <iomanip>
+
+
+vl::d_::SubstrType vl::d_::Substring::type() const
+{
+    return type_;
+}
+
+
+bool vl::d_::Substring::has_string() const
+{
+    return has_string_;
+}
+
+
+const std::string& vl::d_::Substring::content() const
+{
+    assert(has_string_);
+    return content_;
+}
+
+
+const char* vl::d_::Substring::str() const
+{
+    assert(!has_string_);
+    return begin_;
+}
+
+
+int vl::d_::Substring::size() const
+{
+    assert(!has_string_);
+    return size_;
+}
+
+
+const char* vl::d_::find_in_str(const char* b, int size, char what)
+{
+    return std::find(b, b + size, what);
+}
 
 
 vl::d_::Split vl::d_::split_format(const std::string& fmt)
@@ -27,7 +67,7 @@ vl::d_::Split vl::d_::split_format(const std::string& fmt)
         if (start == fmt.npos)
         {
             if (pos != fmt.npos)
-                result.push_back(Substring(SubstrText, fmt.substr(pos)));
+                result.push_back(Substring(SubstrText, &fmt[pos], fmt.size() - pos));
 
             pos = fmt.npos;
 
@@ -37,13 +77,13 @@ vl::d_::Split vl::d_::split_format(const std::string& fmt)
         {
             if (start + 1 < fmt.size() && fmt[start + 1] == '{')
             {
-                result.push_back(Substring(SubstrText, fmt.substr(pos, start - pos + 2)));
+                result.push_back(Substring(SubstrText, &fmt[pos], start - pos + 2));
                 pos = start + 2;
                 continue;
             }
 
             if (start != pos)
-                result.push_back(Substring(SubstrText, fmt.substr(pos, start - pos)));
+                result.push_back(Substring(SubstrText, &fmt[pos], start - pos));
 
             pos = start;
         }
@@ -67,7 +107,7 @@ vl::d_::Split vl::d_::split_format(const std::string& fmt)
                     continue;
                 }
 
-                result.push_back(Substring(SubstrAnchor, fmt.substr(start + 1, end - start - 1)));
+                result.push_back(Substring(SubstrAnchor, &fmt[start + 1], end - start - 1));
                 pos = end + 1;
                 break;
             }
@@ -82,25 +122,33 @@ void vl::d_::join(std::string& out, const Split& split)
 {
     for (const Substring& chunk : split)
     {
-        if (chunk.type == SubstrText)
+        if (chunk.type() == SubstrText)
         {
-            out.append(chunk.content);
+            if (chunk.has_string())
+                out.append(chunk.content());
+            else
+                out.append(chunk.str(), chunk.size());
         }
         else
         {
             out.push_back('{');
-            out.append(chunk.content);
+
+            if (chunk.has_string())
+                out.append(chunk.content());
+            else
+                out.append(chunk.str(), chunk.size());
+
             out.push_back('}');
         }
     }
 }
 
 
-bool vl::d_::has_index(const std::string& substr, int index)
+bool vl::d_::has_index(const char* substr, int substr_size, int index)
 {
-    size_t pos = substr.find_first_of(":");
+    const char* pos = find_in_str(substr, substr_size, ':');
 
-    if ((pos != substr.npos && pos < 1) || (pos == substr.npos && substr.size() < 1))
+    if ((pos != substr + substr_size && pos == substr) || (pos == substr + substr_size && substr_size < 1))
     {
         assert(false && "No position marker provided");
         throw vl::format_error("No position marker provided");
@@ -108,7 +156,7 @@ bool vl::d_::has_index(const std::string& substr, int index)
 
     try
     {
-        return index == stoi(substr.substr(0, pos));
+        return index == std::stoi(std::string(substr, pos - substr));
     }
     catch (const std::logic_error& ex)
     {
@@ -221,7 +269,7 @@ namespace
         return false;
     }
 
-    Format parse_format(const std::string& format, vl::d_::ValueType type)
+    Format parse_format(const char* format, int format_size, vl::d_::ValueType type)
     {
         /*
          * format_spec ::=  [[fill]align][sign][#][0][width][,][.precision][type]
@@ -242,12 +290,12 @@ namespace
         int index = 0;
         Format f(type);
 
-        if (index == static_cast<int>(format.size()))
+        if (index == format_size)
             return f;
 
         // [[fill]align]
 
-        if (index+1 < static_cast<int>(format.size()) && char_in_set(format[index+1], aligns))
+        if (index+1 < format_size && char_in_set(format[index+1], aligns))
         {
             f.align = Format::align_from_char(format[index+1]);
             f.fill = format[index];
@@ -259,7 +307,7 @@ namespace
             ++index;
         }
 
-        if (index == static_cast<int>(format.size()))
+        if (index == format_size)
             return f;
 
         // [sign]
@@ -270,7 +318,7 @@ namespace
             ++index;
         }
 
-        if (index == static_cast<int>(format.size()))
+        if (index == format_size)
             return f;
 
         // [#]
@@ -281,7 +329,7 @@ namespace
             ++index;
         }
 
-        if (index == static_cast<int>(format.size()))
+        if (index == format_size)
             return f;
 
         // [0]
@@ -292,7 +340,7 @@ namespace
             ++index;
         }
 
-        if (index == static_cast<int>(format.size()))
+        if (index == format_size)
             return f;
 
         // [width]
@@ -301,11 +349,11 @@ namespace
             int count = 1;
             while (isdigit(format[index + count]))
                 ++count;
-            f.width = std::stoi(format.substr(index, count));
+            f.width = std::stoi(std::string(&format[index], count));
             index += count;
         }
 
-        if (index == static_cast<int>(format.size()))
+        if (index == format_size)
             return f;
 
         // [,]
@@ -315,7 +363,7 @@ namespace
             ++index;
         }
 
-        if (index == static_cast<int>(format.size()))
+        if (index == format_size)
             return f;
 
         // [.precision]
@@ -339,11 +387,11 @@ namespace
             while (isdigit(format[index + count]))
                 ++count;
 
-            f.precision = std::stoi(format.substr(index, count));
+            f.precision = std::stoi(std::string(&format[index], count));
             index += count;
         }
 
-        if (index == static_cast<int>(format.size()))
+        if (index == format_size)
             return f;
 
         // [type]
@@ -372,7 +420,7 @@ namespace
             ++index;
         }
 
-        if (index != static_cast<int>(format.size()))
+        if (index != format_size)
         {
             assert(false && "Unknown symbols in format specifier");
             throw vl::format_error("Unknown symbols in format specifier");
@@ -382,9 +430,9 @@ namespace
     }
 }
 
-void vl::d_::modify_stream(std::ostringstream& oss, const std::string& format, ValueType type)
+void vl::d_::modify_stream(std::ostringstream& oss, const char* format, int format_size, ValueType type)
 {
-    Format f = parse_format(format, type);
+    Format f = parse_format(format, format_size, type);
 
     switch (f.type)
     {
