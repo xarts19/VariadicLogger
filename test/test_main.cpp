@@ -13,6 +13,41 @@
 
 #include <thread>
 #include <stdio.h>
+#include <chrono>
+
+
+void benchmark()
+{
+    const int iter = 10000;
+    for (int i = 0; i < 3; ++i)
+    {
+        std::string out;
+        std::string fmt;
+        std::string fill = "abcdefghijklmnopqrstuvwxyz0987654321";
+        
+        switch (i)
+        {
+            case 0: fmt = fill + "{0}" + fill; break;
+            case 1: fmt = fill + "{0}" + fill + "{1}" + fill; break;
+            case 2: fmt = fill + "{0}" + fill + "{1}" + fill + "{2}" + fill; break;
+        }
+        
+        auto start = std::chrono::high_resolution_clock::now();
+        
+        switch (i)
+        {
+            case 0: for (int j=0;j<iter;++j) vl::safe_sprintf(out, fmt, 42); break;
+            case 1: for (int j=0;j<iter;++j) vl::safe_sprintf(out, fmt, 42, fill); break;
+            case 2: for (int j=0;j<iter;++j) vl::safe_sprintf(out, fmt, 42, fill, 42); break;
+        }
+        
+        auto end = std::chrono::high_resolution_clock::now();
+        auto elapsed_ns = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        std::string res;
+        vl::safe_sprintf(res, "Formatting {0} args: {1} us\n", i, elapsed_ns.count());
+        std::cout << res;
+    }
+}
 
 
 void concur_test_fnc(vl::ImLogger logger)
@@ -463,5 +498,13 @@ TEST_CASE( "safe_sprintf throws" )
 
 int main(int argc, char* argv[])
 {
+    std::vector<std::string> args(argv, argv+argc);
+
+    if (args.size() > 1 && args[1] == "-b")
+    {
+        benchmark();
+        return 0;
+    }
+        
     return Catch::Session().run(argc, argv);
 }
